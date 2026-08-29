@@ -1,15 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styles from "./Dayline.module.css";
 
 const START_HOUR = 9;
 const END_HOUR = 21;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 
-interface DaylineProps {
-  interactive?: boolean;
+export interface DaylineEvent {
+  id: number;
+  title: string;
+  startAt: string;
+  endAt: string;
+  allDay: boolean;
 }
 
-export const Dayline: React.FC<DaylineProps> = () => {
+interface DaylineProps {
+  events?: DaylineEvent[];
+}
+
+const DEMO_BLOCKS = [
+  { id: "1", start: 60, dur: 100, label: "CLASS", type: "busy" },
+  { id: "2", start: 160, dur: 110, label: "AVAILABLE 1h50m", type: "open" },
+  { id: "3", start: 270, dur: 90, label: "MEETING", type: "busy" },
+  { id: "4", start: 360, dur: 240, label: "AVAILABLE 4h00m", type: "open" },
+  { id: "5", start: 600, dur: 90, label: "DEEP WORK", type: "busy" },
+];
+
+export const Dayline: React.FC<DaylineProps> = ({ events }) => {
   const [currentTimeStr, setCurrentTimeStr] = useState("18:42");
   const [markerPercent, setMarkerPercent] = useState<number>(80.8);
 
@@ -31,13 +47,33 @@ export const Dayline: React.FC<DaylineProps> = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const blocks = [
-    { id: "1", start: 60, dur: 100, label: "CLASS", type: "busy" },
-    { id: "2", start: 160, dur: 110, label: "AVAILABLE 1h50m", type: "open" },
-    { id: "3", start: 270, dur: 90, label: "MEETING", type: "busy" },
-    { id: "4", start: 360, dur: 240, label: "AVAILABLE 4h00m", type: "open" },
-    { id: "5", start: 600, dur: 90, label: "DEEP WORK", type: "busy" },
-  ];
+  const blocks = useMemo(() => {
+    if (events === undefined) return DEMO_BLOCKS;
+
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const workingStart = new Date(dayStart);
+    workingStart.setHours(START_HOUR, 0, 0, 0);
+    const workingEnd = new Date(dayStart);
+    workingEnd.setHours(END_HOUR, 0, 0, 0);
+
+    return events.flatMap((event) => {
+      const eventStart = new Date(event.startAt);
+      const eventEnd = new Date(event.endAt);
+      const visibleStart = new Date(Math.max(eventStart.getTime(), workingStart.getTime()));
+      const visibleEnd = new Date(Math.min(eventEnd.getTime(), workingEnd.getTime()));
+
+      if (visibleStart >= visibleEnd) return [];
+
+      return [{
+        id: String(event.id),
+        start: (visibleStart.getTime() - workingStart.getTime()) / 60000,
+        dur: (visibleEnd.getTime() - visibleStart.getTime()) / 60000,
+        label: event.allDay ? `${event.title} · ALL DAY` : event.title,
+        type: "busy",
+      }];
+    });
+  }, [events]);
 
   return (
     <div className={styles.daylineWrapper} aria-label="Dayline schedule timeline">
@@ -66,6 +102,10 @@ export const Dayline: React.FC<DaylineProps> = () => {
             </div>
           );
         })}
+
+        {events && blocks.length === 0 && (
+          <span className={styles.emptyState}>NO LOCAL EVENTS TODAY</span>
+        )}
 
         <div
           className={styles.copperMarker}

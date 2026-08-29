@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { logout } from "../../api/api";
-import Dayline from "../../components/dayline/Dayline";
+import Dayline, { type DaylineEvent } from "../../components/dayline/Dayline";
 import styles from "./DashboardPage.module.css";
 
 interface UserInfo {
@@ -19,17 +19,27 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState<DaylineEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const [userResponse, googleStatusResponse] = await Promise.all([
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const [userResponse, googleStatusResponse, eventsResponse] = await Promise.all([
           api.get<UserInfo>("/api/auth/me"),
           api.get<GoogleConnectionStatus>("/api/v1/auth/google/status"),
+          api.get<DaylineEvent[]>("/api/v1/calendar/events", {
+            params: { from: today.toISOString(), to: tomorrow.toISOString() },
+          }),
         ]);
         setUser(userResponse.data);
         setGoogleConnected(googleStatusResponse.data.connected);
+        setCalendarEvents(eventsResponse.data);
       } catch {
         localStorage.removeItem("access_token");
         navigate("/", { replace: true });
@@ -70,7 +80,7 @@ export const DashboardPage: React.FC = () => {
               Welcome back, {user.name}
             </h1>
 
-            <Dayline />
+            <Dayline events={calendarEvents} />
 
             <div className={styles.userInfo}>
               <div className={styles.infoRow}>
