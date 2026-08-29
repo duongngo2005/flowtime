@@ -1,0 +1,21 @@
+CREATE TABLE tasks (
+    id                     BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id                BIGINT       NOT NULL,
+    title                  VARCHAR(255) NOT NULL,
+    description            TEXT,
+    estimated_duration     INT          NOT NULL,
+    priority               VARCHAR(20)  NOT NULL,
+    status                 VARCHAR(20)  NOT NULL DEFAULT 'TODO',
+    deadline               TIMESTAMP    NULL,
+    preferred_start_time   TIME         NULL,
+    preferred_end_time     TIME         NULL,
+    min_session_duration   INT          NULL,
+    split_allowed          BOOLEAN      NOT NULL DEFAULT FALSE,
+    category               VARCHAR(100) NULL,
+    created_at             TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at             TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tasks_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_tasks_user_status (user_id, status),
+    INDEX idx_tasks_user_priority (user_id, priority),
+    INDEX idx_tasks_user_deadline (user_id, deadline)
+);

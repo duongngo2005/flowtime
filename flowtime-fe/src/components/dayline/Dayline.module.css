@@ -45,6 +45,14 @@
   background-color: rgba(221, 231, 230, 0.15);
 }
 
+.emptyState {
+  margin: 0 auto;
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 10px;
+  color: var(--color-secondary, #617170);
+  letter-spacing: 0.08em;
+}
+
 .eventBlock {
   position: absolute;
   top: 4px;
