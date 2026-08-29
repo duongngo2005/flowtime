@@ -98,13 +98,17 @@ public class PlanningService {
     @Transactional
     public PlanningSessionResponse cancel(User user, Long planningId) {
         PlanningSession session = findOwnedSession(user, planningId);
-        if (session.getStatus() == PlanningSessionStatus.APPLIED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Applied planning sessions cannot be cancelled.");
+        if (session.getStatus() == PlanningSessionStatus.CANCELLED) {
+            return get(user, planningId);
         }
-        if (session.getStatus() != PlanningSessionStatus.CANCELLED) {
-            session.setStatus(PlanningSessionStatus.CANCELLED);
-            planningSessionRepository.save(session);
+        if (session.getStatus() != PlanningSessionStatus.DRAFT && session.getStatus() != PlanningSessionStatus.APPROVED) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only draft or approved planning sessions can be cancelled."
+            );
         }
+        session.setStatus(PlanningSessionStatus.CANCELLED);
+        planningSessionRepository.save(session);
         return get(user, planningId);
     }
 

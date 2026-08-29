@@ -129,6 +129,43 @@ class PlanningServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
     }
 
+    @Test
+    void cancelsDraftPlanningAndKeepsCancellationIdempotent() {
+        PlanningSession session = session(10L, PlanningSessionStatus.DRAFT);
+        stubOwnedSession(session);
+        when(plannedSlotRepository.findByPlanningSessionIdOrderByStartAtAsc(10L)).thenReturn(List.of());
+        when(unscheduledTaskRepository.findByPlanningSessionIdOrderByIdAsc(10L)).thenReturn(List.of());
+
+        PlanningSessionResponse response = planningService.cancel(user, 10L);
+
+        assertEquals(PlanningSessionStatus.CANCELLED, response.status());
+        verify(planningSessionRepository).save(session);
+
+        planningService.cancel(user, 10L);
+
+        verify(planningSessionRepository, times(1)).save(session);
+    }
+
+    @Test
+    void rejectsCancellingPlansWithApplySideEffectsOrUncertainApplyState() {
+        for (PlanningSessionStatus status : List.of(
+                PlanningSessionStatus.APPLYING,
+                PlanningSessionStatus.APPLY_FAILED,
+                PlanningSessionStatus.APPLIED
+        )) {
+            PlanningSession session = session(10L, status);
+            when(planningSessionRepository.findByIdAndUser(10L, user)).thenReturn(Optional.of(session));
+
+            ResponseStatusException exception = assertThrows(
+                    ResponseStatusException.class,
+                    () -> planningService.cancel(user, 10L)
+            );
+
+            assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        }
+        verify(planningSessionRepository, never()).save(any(PlanningSession.class));
+    }
+
     private void stubOwnedSession(PlanningSession session) {
         when(planningSessionRepository.findByIdAndUser(session.getId(), user)).thenReturn(Optional.of(session));
     }

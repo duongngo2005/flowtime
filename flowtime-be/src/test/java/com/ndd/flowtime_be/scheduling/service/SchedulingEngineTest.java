@@ -2,6 +2,9 @@ package com.ndd.flowtime_be.scheduling.service;
 
 import com.ndd.flowtime_be.calendar.entity.CalendarEvent;
 import com.ndd.flowtime_be.calendar.repository.CalendarEventRepository;
+import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
+import com.ndd.flowtime_be.planning.entity.PlanningSessionStatus;
+import com.ndd.flowtime_be.planning.repository.PlannedSlotRepository;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
@@ -38,6 +41,9 @@ class SchedulingEngineTest {
 
     @Mock
     private SchedulingPreferenceRepository preferenceRepository;
+
+    @Mock
+    private PlannedSlotRepository plannedSlotRepository;
 
     @InjectMocks
     private SchedulingEngine schedulingEngine;
@@ -118,11 +124,35 @@ class SchedulingEngineTest {
                 .sum());
     }
 
+    @Test
+    void excludesTasksWithActivePlanningCommitments() {
+        Task committedTask = task(1L, "Already scheduled", 60, TaskPriority.HIGH, false, null, null, null);
+        Task availableTask = task(2L, "Available", 60, TaskPriority.LOW, false, null, null, null);
+        stubData(List.of(committedTask, availableTask), List.of(), preference(240), List.of(1L));
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(user, new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1));
+
+        assertEquals(List.of(2L), response.suggestions().stream().map(ScheduledBlockSuggestion::taskId).toList());
+    }
+
     private void stubData(List<Task> tasks, List<CalendarEvent> events, SchedulingPreference preference) {
+        stubData(tasks, events, preference, List.of());
+    }
+
+    private void stubData(
+            List<Task> tasks,
+            List<CalendarEvent> events,
+            SchedulingPreference preference,
+            List<Long> committedTaskIds) {
         when(taskRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(tasks);
         when(calendarEventRepository.findByUserAndStartAtLessThanAndEndAtGreaterThanOrderByStartAtAsc(any(), any(), any()))
                 .thenReturn(events);
         when(preferenceRepository.findByUser(user)).thenReturn(Optional.of(preference));
+        when(plannedSlotRepository.findTaskIdsWithActiveCommitments(
+                user,
+                PlannedSlotStatus.REMOVED,
+                PlanningSessionStatus.CANCELLED
+        )).thenReturn(committedTaskIds);
     }
 
     private SchedulingPreference preference(int dailyLimit) {

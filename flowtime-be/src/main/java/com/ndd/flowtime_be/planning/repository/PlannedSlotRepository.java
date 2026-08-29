@@ -3,6 +3,8 @@ package com.ndd.flowtime_be.planning.repository;
 import com.ndd.flowtime_be.planning.entity.PlannedSlot;
 import com.ndd.flowtime_be.planning.entity.PlannedSlotApplyStatus;
 import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
+import com.ndd.flowtime_be.planning.entity.PlanningSessionStatus;
+import com.ndd.flowtime_be.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +20,19 @@ public interface PlannedSlotRepository extends JpaRepository<PlannedSlot, Long> 
     List<PlannedSlot> findByPlanningSessionIdOrderByStartAtAsc(Long planningSessionId);
 
     Optional<PlannedSlot> findByIdAndPlanningSessionId(Long id, Long planningSessionId);
+
+    @Query("""
+            SELECT DISTINCT slot.taskId
+            FROM PlannedSlot slot
+            WHERE slot.planningSession.user = :user
+              AND slot.status <> :removedStatus
+              AND slot.planningSession.status <> :cancelledStatus
+            """)
+    List<Long> findTaskIdsWithActiveCommitments(
+            @Param("user") User user,
+            @Param("removedStatus") PlannedSlotStatus removedStatus,
+            @Param("cancelledStatus") PlanningSessionStatus cancelledStatus
+    );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

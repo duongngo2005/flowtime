@@ -2,6 +2,9 @@ package com.ndd.flowtime_be.scheduling.service;
 
 import com.ndd.flowtime_be.calendar.entity.CalendarEvent;
 import com.ndd.flowtime_be.calendar.repository.CalendarEventRepository;
+import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
+import com.ndd.flowtime_be.planning.entity.PlanningSessionStatus;
+import com.ndd.flowtime_be.planning.repository.PlannedSlotRepository;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
@@ -30,6 +33,7 @@ public class SchedulingEngine {
     private final TaskRepository taskRepository;
     private final CalendarEventRepository calendarEventRepository;
     private final SchedulingPreferenceRepository preferenceRepository;
+    private final PlannedSlotRepository plannedSlotRepository;
 
     @Transactional(readOnly = true)
     public SchedulingPreviewResponse preview(User user, SchedulingPreviewRequest request) {
@@ -85,8 +89,14 @@ public class SchedulingEngine {
     }
 
     private List<Task> schedulableTasks(User user) {
+        Set<Long> committedTaskIds = Set.copyOf(plannedSlotRepository.findTaskIdsWithActiveCommitments(
+                user,
+                PlannedSlotStatus.REMOVED,
+                PlanningSessionStatus.CANCELLED
+        ));
         return taskRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .filter(task -> task.getStatus() == TaskStatus.TODO || task.getStatus() == TaskStatus.IN_PROGRESS)
+                .filter(task -> !committedTaskIds.contains(task.getId()))
                 .sorted(Comparator
                         .comparing(Task::getDeadline, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(task -> priorityRank(task.getPriority()))
