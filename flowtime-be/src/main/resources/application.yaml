@@ -29,6 +29,12 @@ spring:
               - openid
               - profile
               - email
+              - https://www.googleapis.com/auth/calendar.readonly
+              - https://www.googleapis.com/auth/calendar.events
+            authorization-grant-type: authorization_code
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent
 
 app:
   jwt:

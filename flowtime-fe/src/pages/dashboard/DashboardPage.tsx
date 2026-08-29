@@ -11,16 +11,25 @@ interface UserInfo {
   timezone: string;
 }
 
+interface GoogleConnectionStatus {
+  connected: boolean;
+}
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [googleConnected, setGoogleConnected] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await api.get("/api/auth/me");
-        setUser(res.data);
+        const [userResponse, googleStatusResponse] = await Promise.all([
+          api.get<UserInfo>("/api/auth/me"),
+          api.get<GoogleConnectionStatus>("/api/v1/auth/google/status"),
+        ]);
+        setUser(userResponse.data);
+        setGoogleConnected(googleStatusResponse.data.connected);
       } catch {
         localStorage.removeItem("access_token");
         navigate("/", { replace: true });
@@ -50,7 +59,9 @@ export const DashboardPage: React.FC = () => {
       <div className={styles.container}>
         <header className={styles.header}>
           <span className={styles.brand}>FLOWTIME // DASHBOARD</span>
-          <span className={styles.statusBadge}>GOOGLE CALENDAR CONNECTED</span>
+          <span className={styles.statusBadge}>
+            {googleConnected ? "GOOGLE CALENDAR CONNECTED" : "GOOGLE CALENDAR NOT CONNECTED"}
+          </span>
         </header>
 
         {user && (
@@ -69,10 +80,6 @@ export const DashboardPage: React.FC = () => {
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>System Timezone</span>
                 <span className={styles.infoValue}>{user.timezone}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span className={styles.infoLabel}>Scheduling Engine</span>
-                <span className={styles.infoValue}>Deterministic (Active)</span>
               </div>
             </div>
 
