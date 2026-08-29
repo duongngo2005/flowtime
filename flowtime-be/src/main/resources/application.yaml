@@ -2,7 +2,7 @@ spring:
   application:
     name: flowtime-be
   datasource:
-    url: jdbc:mysql://localhost:3306/simi_db
+    url: jdbc:mysql://localhost:3306/flowtime_db
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -14,4 +14,27 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: false
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - openid
+              - profile
+              - email
 
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-expiration-ms: 900000
+    refresh-expiration-ms: 604800000
+    refresh-cookie-secure: false
+    refresh-cookie-same-site: None
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}

@@ -1,0 +1,102 @@
+.page {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--color-paper, #F4F6F1);
+  color: var(--color-ink-night, #102426);
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 24px;
+  box-sizing: border-box;
+}
+
+.container {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  border: 1px solid var(--color-fog, #DDE7E6);
+  padding: 40px;
+  background-color: #FFFFFF;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(16, 36, 38, 0.04);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-fog, #DDE7E6);
+}
+
+.brand {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.statusBadge {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 11px;
+  color: var(--color-patina, #4E8D86);
+  padding: 2px 8px;
+  border: 1px solid var(--color-patina, #4E8D86);
+  border-radius: 2px;
+}
+
+.welcomeTitle {
+  font-family: var(--font-display, 'Fraunces', serif);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-ink-night, #102426);
+  margin: 0;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: var(--color-paper, #F4F6F1);
+  padding: 20px;
+  border-radius: 3px;
+  border: 1px solid var(--color-fog, #DDE7E6);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.infoLabel {
+  color: var(--color-secondary, #617170);
+}
+
+.infoValue {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-weight: 500;
+  color: var(--color-ink-night, #102426);
+}
+
+.logoutBtn {
+  align-self: flex-start;
+  padding: 10px 20px;
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: #B36B45;
+  background-color: transparent;
+  border: 1px solid #B36B45;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logoutBtn:hover {
+  background-color: #B36B45;
+  color: #FFFFFF;
+}

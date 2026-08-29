@@ -1,0 +1,59 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--color-paper, #F4F6F1);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.card {
+  text-align: center;
+  padding: 36px 32px;
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-fog, #DDE7E6);
+  border-radius: 4px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 16px rgba(16, 36, 38, 0.06);
+}
+
+.errorTitle {
+  font-family: var(--font-display, 'Fraunces', Georgia, serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-oxide-copper, #B36B45);
+  margin: 0 0 12px 0;
+}
+
+.errorMessage {
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  font-size: 14px;
+  color: var(--color-secondary, #617170);
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.button {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 3px;
+  border: 1px solid var(--color-ink-night, #102426);
+  background-color: var(--color-ink-night, #102426);
+  color: #FFFFFF;
+  transition: all 0.15s ease;
+}
+
+.button:hover {
+  background-color: var(--color-deep-teal, #18383A);
+}
+
+.loadingText {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 13px;
+  color: var(--color-secondary, #617170);
+}
