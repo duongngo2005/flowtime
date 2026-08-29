@@ -1,6 +1,7 @@
 package com.ndd.flowtime_be.planning.controller;
 
 import com.ndd.flowtime_be.planning.dto.PlanningSessionResponse;
+import com.ndd.flowtime_be.planning.service.PlanningApplyService;
 import com.ndd.flowtime_be.planning.service.PlanningService;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewRequest;
 import com.ndd.flowtime_be.user.entity.User;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class PlanningController {
 
     private final PlanningService planningService;
+    private final PlanningApplyService planningApplyService;
 
     @PostMapping
     public ResponseEntity<PlanningSessionResponse> createDraft(
@@ -44,6 +46,14 @@ public class PlanningController {
             @AuthenticationPrincipal User user,
             @PathVariable Long planningId) {
         return ResponseEntity.ok(planningService.approve(user, planningId));
+    }
+
+    @PostMapping("/{planningId}/apply")
+    public ResponseEntity<PlanningSessionResponse> apply(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long planningId) {
+        planningApplyService.apply(user, planningId);
+        return ResponseEntity.ok(planningService.get(user, planningId));
     }
 
     @PostMapping("/{planningId}/cancel")

@@ -11,7 +11,14 @@ public record FreeBusyResponse(
 ) {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record CalendarBusy(
-            List<BusyPeriod> busy
+            List<BusyPeriod> busy,
+            List<CalendarError> errors
+    ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record CalendarError(
+            String domain,
+            String reason
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
