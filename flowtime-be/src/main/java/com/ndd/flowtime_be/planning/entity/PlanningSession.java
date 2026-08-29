@@ -38,6 +38,19 @@ public class PlanningSession {
     @Builder.Default
     private PlanningSessionStatus status = PlanningSessionStatus.DRAFT;
 
+    @Column(name = "apply_attempts", nullable = false)
+    @Builder.Default
+    private Integer applyAttempts = 0;
+
+    @Column(name = "apply_started_at")
+    private Instant applyStartedAt;
+
+    @Column(name = "applied_at")
+    private Instant appliedAt;
+
+    @Column(name = "last_apply_error", columnDefinition = "TEXT")
+    private String lastApplyError;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

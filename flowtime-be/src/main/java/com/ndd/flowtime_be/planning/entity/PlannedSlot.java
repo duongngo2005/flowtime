@@ -42,6 +42,27 @@ public class PlannedSlot {
     @Builder.Default
     private PlannedSlotStatus status = PlannedSlotStatus.PROPOSED;
 
+    @Column(name = "google_calendar_id", nullable = false, length = 512)
+    @Builder.Default
+    private String googleCalendarId = "primary";
+
+    @Column(name = "google_event_id", nullable = false, updatable = false, length = 64)
+    private String googleEventId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "apply_status", nullable = false, length = 20)
+    @Builder.Default
+    private PlannedSlotApplyStatus applyStatus = PlannedSlotApplyStatus.NOT_REQUESTED;
+
+    @Column(name = "apply_error", columnDefinition = "TEXT")
+    private String applyError;
+
+    @Column(name = "apply_started_at")
+    private Instant applyStartedAt;
+
+    @Column(name = "applied_at")
+    private Instant appliedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -77,6 +77,7 @@ class PlanningServiceTest {
         assertEquals(PlanningSessionStatus.DRAFT, sessionCaptor.getValue().getStatus());
         assertEquals(1, response.slots().size());
         assertEquals(20L, response.slots().getFirst().id());
+        assertTrue(response.slots().getFirst().googleEventId().matches("[a-v0-9]{5,1024}"));
         assertEquals(PlanningSessionStatus.DRAFT, response.status());
         assertEquals(1, response.unscheduledTasks().size());
         assertEquals(60, response.unscheduledTasks().getFirst().unscheduledMinutes());
@@ -111,6 +112,7 @@ class PlanningServiceTest {
 
         assertEquals(PlanningSessionStatus.APPROVED, response.status());
         assertEquals(PlannedSlotStatus.ACCEPTED, proposed.getStatus());
+        assertEquals(PlannedSlotApplyStatus.PENDING, proposed.getApplyStatus());
         assertEquals(PlannedSlotStatus.REMOVED, removed.getStatus());
         verifyNoInteractions(schedulingEngine);
     }

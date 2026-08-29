@@ -81,7 +81,10 @@ public class PlanningService {
         List<PlannedSlot> slots = plannedSlotRepository.findByPlanningSessionIdOrderByStartAtAsc(session.getId());
         slots.stream()
                 .filter(slot -> slot.getStatus() == PlannedSlotStatus.PROPOSED)
-                .forEach(slot -> slot.setStatus(PlannedSlotStatus.ACCEPTED));
+                .forEach(slot -> {
+                    slot.setStatus(PlannedSlotStatus.ACCEPTED);
+                    slot.setApplyStatus(PlannedSlotApplyStatus.PENDING);
+                });
         plannedSlotRepository.saveAll(slots);
         session.setStatus(PlanningSessionStatus.APPROVED);
         planningSessionRepository.save(session);
@@ -125,6 +128,9 @@ public class PlanningService {
                 .endAt(suggestion.endAt())
                 .durationMinutes(suggestion.durationMinutes())
                 .status(PlannedSlotStatus.PROPOSED)
+                .googleCalendarId("primary")
+                .googleEventId(StableGoogleEventId.generate())
+                .applyStatus(PlannedSlotApplyStatus.NOT_REQUESTED)
                 .build();
     }
 

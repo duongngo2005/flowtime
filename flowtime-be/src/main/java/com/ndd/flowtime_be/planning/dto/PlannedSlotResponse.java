@@ -1,6 +1,7 @@
 package com.ndd.flowtime_be.planning.dto;
 
 import com.ndd.flowtime_be.planning.entity.PlannedSlot;
+import com.ndd.flowtime_be.planning.entity.PlannedSlotApplyStatus;
 import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
 
 import java.time.Instant;
@@ -12,7 +13,12 @@ public record PlannedSlotResponse(
         Instant startAt,
         Instant endAt,
         Integer durationMinutes,
-        PlannedSlotStatus status
+        PlannedSlotStatus status,
+        String googleCalendarId,
+        String googleEventId,
+        PlannedSlotApplyStatus applyStatus,
+        String applyError,
+        Instant appliedAt
 ) {
     public static PlannedSlotResponse from(PlannedSlot slot) {
         return new PlannedSlotResponse(
@@ -22,7 +28,12 @@ public record PlannedSlotResponse(
                 slot.getStartAt(),
                 slot.getEndAt(),
                 slot.getDurationMinutes(),
-                slot.getStatus()
+                slot.getStatus(),
+                slot.getGoogleCalendarId(),
+                slot.getGoogleEventId(),
+                slot.getApplyStatus(),
+                slot.getApplyError(),
+                slot.getAppliedAt()
         );
     }
 }

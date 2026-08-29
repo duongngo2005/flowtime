@@ -15,6 +15,10 @@ public record PlanningSessionResponse(
         PlanningSessionStatus status,
         Instant createdAt,
         Instant updatedAt,
+        Integer applyAttempts,
+        Instant applyStartedAt,
+        Instant appliedAt,
+        String lastApplyError,
         List<PlannedSlotResponse> slots,
         List<PlanningUnscheduledTaskResponse> unscheduledTasks
 ) {
@@ -30,6 +34,10 @@ public record PlanningSessionResponse(
                 session.getStatus(),
                 session.getCreatedAt(),
                 session.getUpdatedAt(),
+                session.getApplyAttempts(),
+                session.getApplyStartedAt(),
+                session.getAppliedAt(),
+                session.getLastApplyError(),
                 slots,
                 unscheduledTasks
         );
