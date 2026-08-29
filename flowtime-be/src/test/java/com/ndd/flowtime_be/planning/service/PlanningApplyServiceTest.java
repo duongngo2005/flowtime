@@ -78,7 +78,6 @@ class PlanningApplyServiceTest {
         EventListResponse.GoogleEventDto remoteEvent = googleEvent(slot);
         stubApplyingSlots(slot);
         when(googleCalendarApiClient.getEvent(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
-        when(calendarRepository.findByUser(user)).thenReturn(List.of(primaryCalendar));
         when(googleCalendarApiClient.getFreeBusy(anyString(), anyList(), any(), any())).thenReturn(emptyFreeBusy());
         when(googleCalendarApiClient.createEvent(anyString(), anyString(), any())).thenReturn(remoteEvent);
 
@@ -117,7 +116,6 @@ class PlanningApplyServiceTest {
                 .thenReturn(Optional.empty(), Optional.of(remoteEvent));
         when(calendarRepository.findByUserAndGoogleCalendarId(user, "primary@example.com"))
                 .thenReturn(Optional.of(primaryCalendar));
-        when(calendarRepository.findByUser(user)).thenReturn(List.of(primaryCalendar));
         when(googleCalendarApiClient.getFreeBusy(anyString(), anyList(), any(), any())).thenReturn(emptyFreeBusy());
         when(googleCalendarApiClient.createEvent(anyString(), anyString(), any())).thenReturn(remoteEvent);
         when(calendarEventUpsertService.upsert(user, primaryCalendar, remoteEvent))
@@ -139,7 +137,6 @@ class PlanningApplyServiceTest {
         PlannedSlot second = applyingSlot(2L, "ftabcde456");
         stubApplyingSlots(first, second);
         when(googleCalendarApiClient.getEvent(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
-        when(calendarRepository.findByUser(user)).thenReturn(List.of(primaryCalendar));
         when(googleCalendarApiClient.getFreeBusy(anyString(), anyList(), any(), any())).thenReturn(emptyFreeBusy());
         when(googleCalendarApiClient.createEvent(eq("access-token"), eq("primary@example.com"), any()))
                 .thenReturn(googleEvent(first))
@@ -158,7 +155,6 @@ class PlanningApplyServiceTest {
         PlannedSlot slot = applyingSlot(1L, "ftabcde123");
         stubApplyingSlots(slot);
         when(googleCalendarApiClient.getEvent(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
-        when(calendarRepository.findByUser(user)).thenReturn(List.of(primaryCalendar));
         FreeBusyResponse conflict = new FreeBusyResponse(Map.of(
                 "primary@example.com",
                 new FreeBusyResponse.CalendarBusy(
@@ -176,6 +172,26 @@ class PlanningApplyServiceTest {
                 eq(10L),
                 contains("conflicts with planned slot")
         );
+    }
+
+    @Test
+    void revalidatesOnlyTargetCalendarAndDoesNotReadAllSyncedCalendars() {
+        PlannedSlot slot = applyingSlot(1L, "ftabcde123");
+        EventListResponse.GoogleEventDto remoteEvent = googleEvent(slot);
+        stubApplyingSlots(slot);
+        when(googleCalendarApiClient.getEvent(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+        when(googleCalendarApiClient.getFreeBusy(anyString(), anyList(), any(), any())).thenReturn(emptyFreeBusy());
+        when(googleCalendarApiClient.createEvent(anyString(), anyString(), any())).thenReturn(remoteEvent);
+
+        planningApplyService.apply(user, 10L);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> calendarIds = ArgumentCaptor.forClass(List.class);
+        verify(googleCalendarApiClient).getFreeBusy(eq("access-token"), calendarIds.capture(), any(), any());
+        assertEquals(List.of("primary@example.com"), calendarIds.getValue());
+        verify(calendarRepository, never()).findByUser(user);
+        verify(googleCalendarApiClient).createEvent(eq("access-token"), eq("primary@example.com"), any());
+        verify(applyStateService).markApplied(user, 10L);
     }
 
     private void stubApplyingSlots(PlannedSlot... slots) {

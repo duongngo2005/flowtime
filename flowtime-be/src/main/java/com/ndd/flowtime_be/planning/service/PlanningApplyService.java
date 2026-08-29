@@ -52,7 +52,7 @@ public class PlanningApplyService {
                     targetCalendars,
                     planningId
             );
-            revalidateAvailability(accessToken, user, missingRemoteEvents, targetCalendars);
+            revalidateAvailability(accessToken, missingRemoteEvents, targetCalendars);
 
             for (PlannedSlot slot : missingRemoteEvents) {
                 applyMissingSlot(user, accessToken, slot, targetCalendars.get(slot.getId()), planningId);
@@ -131,7 +131,6 @@ public class PlanningApplyService {
 
     private void revalidateAvailability(
             String accessToken,
-            User user,
             List<PlannedSlot> slots,
             Map<Long, Calendar> targetCalendars) {
         if (slots.isEmpty()) {
@@ -140,30 +139,28 @@ public class PlanningApplyService {
 
         Instant from = slots.stream().map(PlannedSlot::getStartAt).min(Instant::compareTo).orElseThrow();
         Instant to = slots.stream().map(PlannedSlot::getEndAt).max(Instant::compareTo).orElseThrow();
-        List<String> calendarIds = calendarRepository.findByUser(user).stream()
+        List<String> calendarIds = targetCalendars.values().stream()
                 .map(Calendar::getGoogleCalendarId)
-                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new))
-                .stream()
+                .distinct()
                 .toList();
-        if (calendarIds.isEmpty()) {
-            calendarIds = targetCalendars.values().stream()
-                    .map(Calendar::getGoogleCalendarId)
-                    .distinct()
-                    .toList();
-        }
 
         FreeBusyResponse response = googleCalendarApiClient.getFreeBusy(accessToken, calendarIds, from, to);
         if (response == null || response.calendars() == null) {
             throw new IllegalStateException("Google FreeBusy returned no calendar availability data.");
         }
-        for (Map.Entry<String, FreeBusyResponse.CalendarBusy> entry : response.calendars().entrySet()) {
-            if (entry.getValue().errors() != null && !entry.getValue().errors().isEmpty()) {
-                throw new IllegalStateException("Google FreeBusy could not check calendar " + entry.getKey() + ".");
+        for (String calendarId : calendarIds) {
+            FreeBusyResponse.CalendarBusy calendar = response.calendars().get(calendarId);
+            if (calendar == null) {
+                throw new IllegalStateException("Google FreeBusy returned no availability for calendar " + calendarId + ".");
+            }
+            if (calendar.errors() != null && !calendar.errors().isEmpty()) {
+                throw new IllegalStateException("Google FreeBusy could not check calendar " + calendarId + ".");
             }
         }
 
         for (PlannedSlot slot : slots) {
-            if (hasConflict(slot, response)) {
+            Calendar targetCalendar = targetCalendars.get(slot.getId());
+            if (hasConflict(slot, response.calendars().get(targetCalendar.getGoogleCalendarId()))) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
                         "A newly busy Google Calendar period conflicts with planned slot " + slot.getId() + "."
@@ -172,10 +169,8 @@ public class PlanningApplyService {
         }
     }
 
-    private boolean hasConflict(PlannedSlot slot, FreeBusyResponse response) {
-        return response.calendars().values().stream()
-                .filter(Objects::nonNull)
-                .flatMap(calendar -> calendar.busy() == null ? java.util.stream.Stream.empty() : calendar.busy().stream())
+    private boolean hasConflict(PlannedSlot slot, FreeBusyResponse.CalendarBusy calendar) {
+        return (calendar.busy() == null ? java.util.stream.Stream.<FreeBusyResponse.BusyPeriod>empty() : calendar.busy().stream())
                 .anyMatch(period -> overlaps(slot, period));
     }
 
