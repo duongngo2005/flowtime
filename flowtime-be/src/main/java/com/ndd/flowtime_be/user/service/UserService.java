@@ -29,6 +29,10 @@ public class UserService {
         final String resolvedName = name;
 
         return userRepository.findByEmail(email)
+                .map(existing -> {
+                    existing.setName(resolvedName);
+                    return userRepository.save(existing);
+                })
                 .orElseGet(() -> {
                     User newUser = User.builder()
                             .email(email)
