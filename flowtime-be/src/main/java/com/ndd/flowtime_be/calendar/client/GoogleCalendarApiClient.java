@@ -6,10 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -47,12 +49,16 @@ public class GoogleCalendarApiClient {
     }
 
     public FreeBusyResponse getFreeBusy(String accessToken, Instant from, Instant to) {
+        return getFreeBusy(accessToken, List.of("primary"), from, to);
+    }
+
+    public FreeBusyResponse getFreeBusy(String accessToken, List<String> calendarIds, Instant from, Instant to) {
         log.debug("Fetching free/busy from {} to {}", from, to);
 
         Map<String, Object> requestBody = Map.of(
                 "timeMin", from.toString(),
                 "timeMax", to.toString(),
-                "items", List.of(Map.of("id", "primary"))
+                "items", calendarIds.stream().map(id -> Map.of("id", id)).toList()
         );
 
         return restClient.post()
@@ -62,6 +68,24 @@ public class GoogleCalendarApiClient {
                 .body(requestBody)
                 .retrieve()
                 .body(FreeBusyResponse.class);
+    }
+
+    public Optional<EventListResponse.GoogleEventDto> getEvent(
+            String accessToken,
+            String calendarId,
+            String eventId) {
+        try {
+            return Optional.ofNullable(restClient.get()
+                    .uri(BASE_URL + "/calendars/{calendarId}/events/{eventId}", calendarId, eventId)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(EventListResponse.GoogleEventDto.class));
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) {
+                return Optional.empty();
+            }
+            throw exception;
+        }
     }
 
     public EventListResponse.GoogleEventDto createEvent(String accessToken, String calendarId,
