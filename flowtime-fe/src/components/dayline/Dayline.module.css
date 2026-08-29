@@ -1,0 +1,131 @@
+.daylineWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  position: relative;
+  user-select: none;
+}
+
+.ticksRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+}
+
+.tickItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.tickLabel {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 12px;
+  color: var(--color-secondary, #617170);
+  letter-spacing: 0.02em;
+}
+
+.tickMark {
+  width: 1px;
+  height: 6px;
+  background-color: var(--color-fog, #DDE7E6);
+}
+
+.track {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  border-top: 1px solid var(--color-fog, #DDE7E6);
+  border-bottom: 1px solid var(--color-fog, #DDE7E6);
+  display: flex;
+  align-items: center;
+  background-color: rgba(221, 231, 230, 0.15);
+}
+
+.eventBlock {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.busyBlock {
+  background-color: var(--color-ink-night, #102426);
+  color: var(--color-paper, #F4F6F1);
+}
+
+.openBlock {
+  border: 1px dashed var(--color-patina, #4E8D86);
+  background-color: rgba(78, 141, 134, 0.06);
+  color: var(--color-patina, #4E8D86);
+}
+
+.blockText {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.copperMarker {
+  position: absolute;
+  top: -8px;
+  bottom: -28px;
+  width: 0;
+  z-index: 10;
+  pointer-events: none;
+  transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.copperLine {
+  width: 2px;
+  height: 100%;
+  background-color: var(--color-oxide-copper, #B36B45);
+  position: absolute;
+  left: -1px;
+}
+
+.copperTag {
+  position: absolute;
+  bottom: -20px;
+  left: -24px;
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.copperPip {
+  font-size: 8px;
+  color: var(--color-oxide-copper, #B36B45);
+  line-height: 1;
+}
+
+.copperText {
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--color-oxide-copper, #B36B45);
+}
+
+@media (max-width: 640px) {
+  .track {
+    height: 32px;
+  }
+  .tickLabel {
+    font-size: 10px;
+  }
+  .blockText {
+    display: none;
+  }
+}
