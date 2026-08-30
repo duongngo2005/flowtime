@@ -170,7 +170,7 @@ class PlanningApplyServiceTest {
         verify(applyStateService).markApplyFailed(
                 eq(user),
                 eq(10L),
-                contains("conflicts with planned slot")
+                contains("xung đột với khung giờ đã lên lịch")
         );
     }
 

@@ -19,16 +19,16 @@ const OAuth2CallbackPage: React.FC = () => {
     return (
       <div className={styles.container}>
         <div className={styles.card}>
-          <h2 className={styles.errorTitle}>Authentication Failed</h2>
+          <h2 className={styles.errorTitle}>Đăng nhập không thành công</h2>
           <p className={styles.errorMessage}>
-            Google sign-in could not be completed. Please try again.
+            Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại.
           </p>
           <button
             type="button"
             onClick={() => navigate("/", { replace: true })}
             className={styles.button}
           >
-            Back to Home
+            Về trang chủ
           </button>
         </div>
       </div>
@@ -38,7 +38,7 @@ const OAuth2CallbackPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <p className={styles.loadingText}>
-        Connecting your calendar and setting up session…
+        Đang kết nối lịch và thiết lập phiên làm việc…
       </p>
     </div>
   );

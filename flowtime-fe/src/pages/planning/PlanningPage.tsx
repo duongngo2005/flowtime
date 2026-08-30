@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import api from "../../api/api";
-import type { PlanningSession, PlannedSlot, PlanningStatus } from "../../api/contracts";
+import type { PlannedSlotApplyStatus, PlannedSlotStatus, PlanningSession, PlannedSlot, PlanningStatus } from "../../api/contracts";
 import { getErrorMessage } from "../../api/errors";
 import styles from "../workspace/WorkspacePage.module.css";
 
@@ -14,18 +14,41 @@ const localDate = (): string => {
 };
 
 const formatSlotTime = (value: string): string =>
-  new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 
 const unscheduledMessage = (reason: string): string => {
   const messages: Record<string, string> = {
-    DEADLINE_PASSED: "The deadline has already passed.",
-    NO_AVAILABLE_SLOT: "No eligible continuous slot is available.",
-    INSUFFICIENT_DURATION: "There is not enough eligible time in this planning window.",
+    DEADLINE_PASSED: "Hạn chót đã qua.",
+    NO_AVAILABLE_SLOT: "Không có khung thời gian liên tục phù hợp.",
+    INSUFFICIENT_DURATION: "Không đủ thời gian phù hợp trong khoảng lập kế hoạch này.",
   };
   return messages[reason] || reason;
 };
 
 const statusIsWarning = (status: PlanningStatus): boolean => status === "APPLY_FAILED" || status === "CANCELLED";
+
+const planningStatusLabel: Record<PlanningStatus, string> = {
+  DRAFT: "Bản nháp",
+  APPROVED: "Đã phê duyệt",
+  APPLYING: "Đang áp dụng",
+  APPLY_FAILED: "Áp dụng thất bại",
+  CANCELLED: "Đã hủy",
+  APPLIED: "Đã áp dụng",
+};
+
+const slotStatusLabel: Record<PlannedSlotStatus, string> = {
+  PROPOSED: "Đề xuất",
+  ACCEPTED: "Đã chấp nhận",
+  REMOVED: "Đã bỏ",
+};
+
+const applyStatusLabel: Record<PlannedSlotApplyStatus, string> = {
+  NOT_REQUESTED: "Chưa yêu cầu",
+  PENDING: "Đang chờ",
+  APPLYING: "Đang áp dụng",
+  APPLIED: "Đã áp dụng",
+  FAILED: "Thất bại",
+};
 
 const PlanningPage = () => {
   const [startDate, setStartDate] = useState(localDate);
@@ -44,7 +67,7 @@ const PlanningPage = () => {
       setPlan(response.data);
     } catch (requestError) {
       window.sessionStorage.removeItem(activePlanStorageKey);
-      setError(getErrorMessage(requestError, "Could not load the latest plan."));
+      setError(getErrorMessage(requestError, "Không thể tải kế hoạch mới nhất."));
     } finally {
       setLoadingPlan(false);
     }
@@ -72,9 +95,9 @@ const PlanningPage = () => {
       });
       window.sessionStorage.setItem(activePlanStorageKey, String(response.data.id));
       setPlan(response.data);
-      setNotice("Draft plan generated. Review every proposed slot before approval.");
+      setNotice("Đã tạo bản nháp. Hãy xem xét từng khung giờ được đề xuất trước khi phê duyệt.");
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not generate a draft plan."));
+      setError(getErrorMessage(requestError, "Không thể tạo bản nháp kế hoạch."));
     } finally {
       setSubmitting(false);
     }
@@ -88,9 +111,9 @@ const PlanningPage = () => {
       setError(null);
       const response = await api.delete<PlanningSession>(`/api/v1/planning/${plan.id}/slots/${slot.id}`);
       setPlan(response.data);
-      setNotice(`Removed “${slot.taskTitle}” from this draft.`);
+      setNotice(`Đã bỏ “${slot.taskTitle}” khỏi bản nháp.`);
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not remove this slot."));
+      setError(getErrorMessage(requestError, "Không thể bỏ khung giờ này."));
     } finally {
       setSubmitting(false);
     }
@@ -104,9 +127,9 @@ const PlanningPage = () => {
       setError(null);
       const response = await api.post<PlanningSession>(`/api/v1/planning/${plan.id}/approve`);
       setPlan(response.data);
-      setNotice("Plan approved. It has not been written to Google Calendar yet.");
+      setNotice("Đã phê duyệt kế hoạch. Kế hoạch chưa được ghi vào Google Calendar.");
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not approve this plan."));
+      setError(getErrorMessage(requestError, "Không thể phê duyệt kế hoạch này."));
     } finally {
       setSubmitting(false);
     }
@@ -121,28 +144,28 @@ const PlanningPage = () => {
       const response = await api.post<PlanningSession>(`/api/v1/planning/${plan.id}/apply`);
       setPlan(response.data);
       if (response.data.status === "APPLIED") {
-        setNotice("Plan applied to Google Calendar.");
+        setNotice("Đã áp dụng kế hoạch vào Google Calendar.");
       } else {
-        setError(response.data.lastApplyError || "Some slots could not be applied. You can retry this plan.");
+        setError(response.data.lastApplyError || "Một số khung giờ chưa thể áp dụng. Bạn có thể thử lại kế hoạch này.");
       }
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not apply this plan."));
+      setError(getErrorMessage(requestError, "Không thể áp dụng kế hoạch này."));
     } finally {
       setSubmitting(false);
     }
   };
 
   const cancelPlan = async () => {
-    if (!plan || !window.confirm("Cancel this draft or approved plan? It has not created any Google events.")) return;
+    if (!plan || !window.confirm("Hủy bản nháp hoặc kế hoạch đã phê duyệt này? Thao tác này chưa tạo sự kiện Google nào.")) return;
 
     try {
       setSubmitting(true);
       setError(null);
       const response = await api.post<PlanningSession>(`/api/v1/planning/${plan.id}/cancel`);
       setPlan(response.data);
-      setNotice("Plan cancelled. No Google Calendar event was changed.");
+      setNotice("Đã hủy kế hoạch. Không có sự kiện Google Calendar nào bị thay đổi.");
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not cancel this plan."));
+      setError(getErrorMessage(requestError, "Không thể hủy kế hoạch này."));
     } finally {
       setSubmitting(false);
     }
@@ -156,9 +179,9 @@ const PlanningPage = () => {
     <section className={styles.page}>
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Planning workspace</p>
-          <h1 className={styles.title}>Review before FlowTime writes.</h1>
-          <p className={styles.subtitle}>A draft is safe: it only stores suggestions. Google Calendar changes happen only after approval and apply.</p>
+          <p className={styles.eyebrow}>Không gian lập kế hoạch</p>
+          <h1 className={styles.title}>Xem xét trước khi FlowTime ghi lịch.</h1>
+          <p className={styles.subtitle}>Bản nháp an toàn: nó chỉ lưu đề xuất. Google Calendar chỉ thay đổi sau khi bạn phê duyệt và áp dụng.</p>
         </div>
       </div>
 
@@ -167,82 +190,82 @@ const PlanningPage = () => {
 
       <div className={styles.twoColumn}>
         <form className={styles.panel} onSubmit={generatePlan}>
-          <h2 className={styles.panelTitle}>Generate a draft</h2>
-          <p className={styles.panelHint}>The engine considers your local synced calendar, task backlog and saved preferences.</p>
+          <h2 className={styles.panelTitle}>Tạo bản nháp</h2>
+          <p className={styles.panelHint}>Công cụ xem xét lịch đồng bộ cục bộ, danh sách nhiệm vụ và các tùy chọn đã lưu của bạn.</p>
           <div className={styles.formGrid}>
             <label className={styles.field}>
-              Start date
+              Ngày bắt đầu
               <input className={styles.input} onChange={(event) => setStartDate(event.target.value)} required type="date" value={startDate} />
             </label>
             <label className={styles.field}>
-              Days to plan
+              Số ngày để lên kế hoạch
               <input className={styles.input} max="14" min="1" onChange={(event) => setDays(event.target.value)} required type="number" value={days} />
             </label>
           </div>
           <div className={styles.actions}>
-            <button className={styles.primaryButton} disabled={submitting} type="submit">{submitting ? "Generating…" : "Generate draft"}</button>
+            <button className={styles.primaryButton} disabled={submitting} type="submit">{submitting ? "Đang tạo…" : "Tạo bản nháp"}</button>
           </div>
         </form>
 
         <div className={styles.panel}>
-          <h2 className={styles.panelTitle}>How this works</h2>
-          <p className={styles.panelHint}>Drafts never call Google Calendar. The apply step re-checks the target calendar and safely retries without duplicate events.</p>
+          <h2 className={styles.panelTitle}>Cách thức hoạt động</h2>
+          <p className={styles.panelHint}>Bản nháp không gọi Google Calendar. Bước áp dụng kiểm tra lại lịch đích và có thể thử lại an toàn mà không tạo sự kiện trùng.</p>
           <div className={styles.detailGrid}>
-            <div className={styles.detailItem}><span className={styles.detailLabel}>1. Draft</span><span className={styles.detailValue}>Review slots</span></div>
-            <div className={styles.detailItem}><span className={styles.detailLabel}>2. Approve</span><span className={styles.detailValue}>Confirm plan</span></div>
-            <div className={styles.detailItem}><span className={styles.detailLabel}>3. Apply</span><span className={styles.detailValue}>Create events</span></div>
+            <div className={styles.detailItem}><span className={styles.detailLabel}>1. Bản nháp</span><span className={styles.detailValue}>Xem xét khung giờ</span></div>
+            <div className={styles.detailItem}><span className={styles.detailLabel}>2. Phê duyệt</span><span className={styles.detailValue}>Xác nhận kế hoạch</span></div>
+            <div className={styles.detailItem}><span className={styles.detailLabel}>3. Áp dụng</span><span className={styles.detailValue}>Tạo sự kiện</span></div>
           </div>
         </div>
       </div>
 
       <div className={styles.panel}>
-        <h2 className={styles.panelTitle}>Current plan</h2>
+        <h2 className={styles.panelTitle}>Kế hoạch hiện tại</h2>
         {loadingPlan ? (
-          <p className={styles.empty}>Loading saved plan…</p>
+          <p className={styles.empty}>Đang tải kế hoạch đã lưu…</p>
         ) : !plan ? (
-          <p className={styles.empty}>No draft in this browser session. Generate a plan when your tasks and preferences are ready.</p>
+          <p className={styles.empty}>Chưa có bản nháp trong phiên trình duyệt này. Hãy tạo kế hoạch khi nhiệm vụ và thiết lập đã sẵn sàng.</p>
         ) : (
           <>
             <div className={styles.detailGrid}>
-              <div className={styles.detailItem}><span className={styles.detailLabel}>Status</span><span className={`${styles.statusPill} ${statusIsWarning(plan.status) ? styles.statusPillWarning : ""}`}>{plan.status}</span></div>
-              <div className={styles.detailItem}><span className={styles.detailLabel}>Window</span><span className={styles.detailValue}>{plan.startDate} → {plan.endDate}</span></div>
-              <div className={styles.detailItem}><span className={styles.detailLabel}>Apply attempts</span><span className={styles.detailValue}>{plan.applyAttempts}</span></div>
+              <div className={styles.detailItem}><span className={styles.detailLabel}>Tình trạng</span><span className={`${styles.statusPill} ${statusIsWarning(plan.status) ? styles.statusPillWarning : ""}`}>{planningStatusLabel[plan.status]}</span></div>
+              <div className={styles.detailItem}><span className={styles.detailLabel}>Cửa sổ</span><span className={styles.detailValue}>{plan.startDate} → {plan.endDate}</span></div>
+              <div className={styles.detailItem}><span className={styles.detailLabel}>Lần thử áp dụng</span><span className={styles.detailValue}>{plan.applyAttempts}</span></div>
             </div>
 
             {plan.lastApplyError && <p className={styles.alertError} style={{ marginTop: "18px" }}>{plan.lastApplyError}</p>}
 
-            <h3 className={styles.sectionTitle}>Scheduled slots</h3>
-            {plan.slots.length === 0 ? <p className={styles.empty}>No task could be scheduled in this window.</p> : (
+            <h3 className={styles.sectionTitle}>Các khung giờ đã lên lịch</h3>
+            {plan.slots.length === 0 ? <p className={styles.empty}>Không thể lên lịch nhiệm vụ nào trong cửa sổ này.</p> : (
               <div className={styles.slotList}>
                 {plan.slots.map((slot) => (
                   <article className={`${styles.slotCard} ${slot.status === "REMOVED" ? styles.slotMuted : ""}`} key={slot.id}>
                     <div>
                       <h4>{slot.taskTitle}</h4>
-                      <p className={styles.slotTime}>{formatSlotTime(slot.startAt)} → {formatSlotTime(slot.endAt)} · {slot.durationMinutes} min</p>
-                      <p className={styles.taskMeta}>Review: {slot.status} · Apply: {slot.applyStatus}{slot.applyError ? ` · ${slot.applyError}` : ""}</p>
+                      <p className={styles.slotTime}>{formatSlotTime(slot.startAt)} → {formatSlotTime(slot.endAt)} · {slot.durationMinutes} phút</p>
+                      <p className={styles.taskMeta}>Xem xét: {slotStatusLabel[slot.status]} · Áp dụng: {applyStatusLabel[slot.applyStatus]}{slot.applyError ? ` · ${slot.applyError}` : ""}</p>
                     </div>
-                    {canReview && slot.status === "PROPOSED" && <button className={styles.secondaryButton} disabled={submitting} onClick={() => void removeSlot(slot)} type="button">Remove</button>}
+                    {canReview && slot.status === "PROPOSED" && <button className={styles.secondaryButton} disabled={submitting} onClick={() => void removeSlot(slot)} type="button">Bỏ</button>}
                   </article>
                 ))}
               </div>
             )}
 
-            <h3 className={styles.sectionTitle}>Unscheduled tasks</h3>
-            {plan.unscheduledTasks.length === 0 ? <p className={styles.empty}>Every eligible task in this planning window received a suggestion.</p> : (
+            <h3 className={styles.sectionTitle}>Tác vụ không theo lịch trình</h3>
+            {plan.unscheduledTasks.length === 0 ? <p className={styles.empty}>Mọi nhiệm vụ phù hợp trong cửa sổ này đều đã nhận được đề xuất.</p> : (
               <div className={styles.unscheduledList}>
                 {plan.unscheduledTasks.map((task) => (
                   <article className={styles.unscheduledCard} key={task.id}>
-                    <div><h4>{task.taskTitle}</h4><p className={styles.taskDescription}>{unscheduledMessage(task.reason)} · {task.unscheduledMinutes} min remaining</p></div>
-                    <span className={`${styles.statusPill} ${styles.statusPillWarning}`}>{task.reason}</span>
+                    <div><h4>{task.taskTitle}</h4><p className={styles.taskDescription}>{unscheduledMessage(task.reason)} · Còn {task.unscheduledMinutes} phút</p></div>
+                    <span className={`${styles.statusPill} ${styles.statusPillWarning}`}>{unscheduledMessage(task.reason)}</span>
                   </article>
                 ))}
               </div>
             )}
 
             <div className={styles.actions}>
-              {canReview && <button className={styles.primaryButton} disabled={submitting} onClick={() => void approvePlan()} type="button">Approve plan</button>}
-              {canApply && <button className={styles.primaryButton} disabled={submitting} onClick={() => void applyPlan()} type="button">{plan.status === "APPLY_FAILED" ? "Retry apply" : "Apply to Google Calendar"}</button>}
-              {canCancel && <button className={styles.dangerButton} disabled={submitting} onClick={() => void cancelPlan()} type="button">Cancel plan</button>}
+              {canReview && <button className={styles.primaryButton} disabled={submitting} onClick={() => void approvePlan()} type="button">Phê duyệt kế hoạch</button>}
+              {canApply && <button className={styles.primaryButton} disabled={submitting} onClick={() => void applyPlan()} type="button">{plan.status === "APPLY_FAILED" ? "Thử áp dụng lại" : "Áp dụng vào Google Calendar"}</button>}
+              {canCancel && <button className={styles.dangerButton} disabled={submitting} onClick={() => void cancelPlan()} type="button">Hủy kế hoạch</button>}
             </div>
           </>
         )}

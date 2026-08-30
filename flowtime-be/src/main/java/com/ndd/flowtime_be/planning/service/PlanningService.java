@@ -32,6 +32,12 @@ public class PlanningService {
 
     @Transactional
     public PlanningSessionResponse createDraft(User user, SchedulingPreviewRequest request) {
+        return planningSessionRepository.findFirstByUserAndStatusOrderByCreatedAtDesc(user, PlanningSessionStatus.DRAFT)
+                .map(session -> get(user, session.getId()))
+                .orElseGet(() -> createNewDraft(user, request));
+    }
+
+    private PlanningSessionResponse createNewDraft(User user, SchedulingPreviewRequest request) {
         SchedulingPreviewResponse preview = schedulingEngine.preview(user, request);
         PlanningSession session = PlanningSession.builder()
                 .user(user)
@@ -68,7 +74,7 @@ public class PlanningService {
         PlanningSession session = findOwnedSession(user, planningId);
         requireDraft(session);
         PlannedSlot slot = plannedSlotRepository.findByIdAndPlanningSessionId(slotId, session.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned slot not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy khung giờ đã lên lịch."));
         slot.setStatus(PlannedSlotStatus.REMOVED);
         plannedSlotRepository.save(slot);
         return get(user, planningId);
@@ -104,7 +110,7 @@ public class PlanningService {
         if (session.getStatus() != PlanningSessionStatus.DRAFT && session.getStatus() != PlanningSessionStatus.APPROVED) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Only draft or approved planning sessions can be cancelled."
+                    "Chỉ có thể hủy kế hoạch ở trạng thái bản nháp hoặc đã phê duyệt."
             );
         }
         session.setStatus(PlanningSessionStatus.CANCELLED);
@@ -114,12 +120,12 @@ public class PlanningService {
 
     private PlanningSession findOwnedSession(User user, Long planningId) {
         return planningSessionRepository.findByIdAndUser(planningId, user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planning session not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy kế hoạch."));
     }
 
     private void requireDraft(PlanningSession session) {
         if (session.getStatus() != PlanningSessionStatus.DRAFT) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only draft planning sessions can be changed.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Chỉ có thể thay đổi kế hoạch ở trạng thái bản nháp.");
         }
     }
 

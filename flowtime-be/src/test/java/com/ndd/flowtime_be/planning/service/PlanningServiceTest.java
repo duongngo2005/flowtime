@@ -85,6 +85,26 @@ class PlanningServiceTest {
     }
 
     @Test
+    void returnsTheExistingDraftInsteadOfGeneratingAnOverlappingSecondDraft() {
+        PlanningSession session = session(10L, PlanningSessionStatus.DRAFT);
+        PlannedSlot slot = slot(20L, session, PlannedSlotStatus.PROPOSED);
+        when(planningSessionRepository.findFirstByUserAndStatusOrderByCreatedAtDesc(user, PlanningSessionStatus.DRAFT))
+                .thenReturn(Optional.of(session));
+        when(planningSessionRepository.findByIdAndUser(10L, user)).thenReturn(Optional.of(session));
+        when(plannedSlotRepository.findByPlanningSessionIdOrderByStartAtAsc(10L)).thenReturn(List.of(slot));
+        when(unscheduledTaskRepository.findByPlanningSessionIdOrderByIdAsc(10L)).thenReturn(List.of());
+
+        PlanningSessionResponse response = planningService.createDraft(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 7)
+        );
+
+        assertEquals(10L, response.id());
+        verifyNoInteractions(schedulingEngine);
+        verify(planningSessionRepository, never()).save(any());
+    }
+
+    @Test
     void removesOnlyOwnedDraftSlotsWithoutDeletingTheSnapshot() {
         PlanningSession session = session(10L, PlanningSessionStatus.DRAFT);
         PlannedSlot slot = slot(20L, session, PlannedSlotStatus.PROPOSED);

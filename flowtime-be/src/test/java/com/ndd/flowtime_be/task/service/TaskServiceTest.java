@@ -50,6 +50,7 @@ class TaskServiceTest {
         assertEquals(TaskStatus.TODO, response.status());
         assertEquals("Finish thesis", taskCaptor.getValue().getTitle());
         assertEquals(120, taskCaptor.getValue().getEstimatedDuration());
+        assertEquals(180, taskCaptor.getValue().getMaxDailyMinutes());
         assertEquals(TaskPriority.HIGH, taskCaptor.getValue().getPriority());
         assertFalse(taskCaptor.getValue().isSplitAllowed());
     }
@@ -102,6 +103,7 @@ class TaskServiceTest {
                 LocalTime.of(18, 0),
                 LocalTime.of(22, 0),
                 60,
+                180,
                 false,
                 "School"
         );

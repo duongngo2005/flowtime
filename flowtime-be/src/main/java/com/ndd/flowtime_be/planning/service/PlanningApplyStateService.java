@@ -40,7 +40,7 @@ public class PlanningApplyStateService {
         if (claimed != 1) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Planning session is not available for apply."
+                    "Kế hoạch hiện không thể được áp dụng."
             );
         }
 
@@ -80,7 +80,7 @@ public class PlanningApplyStateService {
         if (unappliedSlots > 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "All accepted planned slots must be applied before completing the planning session."
+                    "Mọi khung giờ đã chấp nhận phải được áp dụng trước khi hoàn tất kế hoạch."
             );
         }
 
@@ -109,23 +109,23 @@ public class PlanningApplyStateService {
 
     private PlanningSession findOwnedSession(User user, Long planningId) {
         return planningSessionRepository.findByIdAndUser(planningId, user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planning session not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy kế hoạch."));
     }
 
     private void requireApplying(PlanningSession session) {
         if (session.getStatus() != PlanningSessionStatus.APPLYING) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Planning session is not being applied."
+                    "Kế hoạch này không ở trạng thái đang áp dụng."
             );
         }
     }
 
     private PlannedSlot findApplyingSlot(Long planningId, Long slotId) {
         PlannedSlot slot = plannedSlotRepository.findByIdAndPlanningSessionId(slotId, planningId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Planned slot not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy khung giờ đã lên lịch."));
         if (slot.getApplyStatus() != PlannedSlotApplyStatus.APPLYING) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Planned slot is not being applied.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Khung giờ này không ở trạng thái đang áp dụng.");
         }
         return slot;
     }

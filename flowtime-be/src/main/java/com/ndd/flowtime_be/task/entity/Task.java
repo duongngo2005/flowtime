@@ -53,6 +53,9 @@ public class Task {
     @Column(name = "min_session_duration")
     private Integer minSessionDuration;
 
+    @Column(name = "max_daily_minutes")
+    private Integer maxDailyMinutes;
+
     @Column(name = "split_allowed", nullable = false)
     @Builder.Default
     private boolean splitAllowed = false;

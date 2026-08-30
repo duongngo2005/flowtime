@@ -21,7 +21,7 @@ public class CalendarEventQueryService {
     @Transactional(readOnly = true)
     public List<CalendarEventResponse> listEvents(User user, Instant from, Instant to) {
         if (!from.isBefore(to)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from must be before to.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thời điểm bắt đầu phải trước thời điểm kết thúc.");
         }
 
         return calendarEventRepository
@@ -35,6 +35,6 @@ public class CalendarEventQueryService {
     public CalendarEventResponse getEvent(User user, Long eventId) {
         return calendarEventRepository.findByIdAndUser(eventId, user)
                 .map(CalendarEventResponse::from)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Calendar event not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sự kiện lịch."));
     }
 }

@@ -16,6 +16,8 @@ public interface PlanningSessionRepository extends JpaRepository<PlanningSession
 
     Optional<PlanningSession> findByIdAndUser(Long id, User user);
 
+    Optional<PlanningSession> findFirstByUserAndStatusOrderByCreatedAtDesc(User user, PlanningSessionStatus status);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             UPDATE PlanningSession session

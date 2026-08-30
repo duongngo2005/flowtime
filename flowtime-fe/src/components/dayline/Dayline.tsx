@@ -18,11 +18,11 @@ interface DaylineProps {
 }
 
 const DEMO_BLOCKS = [
-  { id: "1", start: 60, dur: 100, label: "CLASS", type: "busy" },
-  { id: "2", start: 160, dur: 110, label: "AVAILABLE 1h50m", type: "open" },
-  { id: "3", start: 270, dur: 90, label: "MEETING", type: "busy" },
-  { id: "4", start: 360, dur: 240, label: "AVAILABLE 4h00m", type: "open" },
-  { id: "5", start: 600, dur: 90, label: "DEEP WORK", type: "busy" },
+  { id: "1", start: 60, dur: 100, label: "LỚP HỌC", type: "busy" },
+  { id: "2", start: 160, dur: 110, label: "TRỐNG 1 GIỜ 50 PHÚT", type: "open" },
+  { id: "3", start: 270, dur: 90, label: "HỌP", type: "busy" },
+  { id: "4", start: 360, dur: 240, label: "TRỐNG 4 GIỜ", type: "open" },
+  { id: "5", start: 600, dur: 90, label: "LÀM VIỆC SÂU", type: "busy" },
 ];
 
 export const Dayline: React.FC<DaylineProps> = ({ events }) => {
@@ -80,14 +80,14 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
         id: String(event.id),
         start: (visibleStart.getTime() - workingStart.getTime()) / 60000,
         dur: (visibleEnd.getTime() - visibleStart.getTime()) / 60000,
-        label: event.allDay ? `${event.title} · ALL DAY` : event.title,
+        label: event.allDay ? `${event.title} · CẢ NGÀY` : event.title,
         type: "busy",
       }];
     });
   }, [events]);
 
   return (
-    <div className={styles.daylineWrapper} aria-label="Dayline schedule timeline">
+    <div className={styles.daylineWrapper} aria-label="Dòng thời gian trong ngày">
       <div className={styles.ticksRow} aria-hidden="true">
         {["09:00", "12:00", "15:00", "18:00", "21:00"].map((t) => (
           <div key={t} className={styles.tickItem}>
@@ -99,7 +99,7 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
 
       {markerPercent === null && currentTimeStr && outsideTimeline && (
         <p className={styles.outsideNow} role="status">
-          NOW {currentTimeStr}
+          BÂY GIỜ {currentTimeStr} · {outsideTimeline === "before" ? "trước khung giờ hiển thị" : "sau khung giờ hiển thị"}
         </p>
       )}
 
@@ -121,7 +121,7 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
         })}
 
         {events && blocks.length === 0 && (
-          <span className={styles.emptyState}>NO LOCAL EVENTS TODAY</span>
+          <span className={styles.emptyState}>HÔM NAY KHÔNG CÓ SỰ KIỆN ĐỒNG BỘ</span>
         )}
 
         {markerPercent !== null && (
@@ -129,12 +129,12 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
             className={styles.copperMarker}
             style={{ left: `${markerPercent}%` }}
             role="status"
-            aria-label={`Current time indicator: ${currentTimeStr} Now`}
+            aria-label={`Mốc thời gian hiện tại: ${currentTimeStr}`}
           >
             <div className={styles.copperLine} />
             <div className={styles.copperTag}>
               <span className={styles.copperPip}>▲</span>
-              <span className={styles.copperText}>NOW {currentTimeStr}</span>
+              <span className={styles.copperText}>BÂY GIỜ {currentTimeStr}</span>
             </div>
           </div>
         )}

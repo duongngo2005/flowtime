@@ -5,13 +5,13 @@ import { getErrorMessage } from "../../api/errors";
 import styles from "../workspace/WorkspacePage.module.css";
 
 const week: Array<{ value: WorkingDay; label: string }> = [
-  { value: "MONDAY", label: "Mon" },
-  { value: "TUESDAY", label: "Tue" },
-  { value: "WEDNESDAY", label: "Wed" },
-  { value: "THURSDAY", label: "Thu" },
-  { value: "FRIDAY", label: "Fri" },
-  { value: "SATURDAY", label: "Sat" },
-  { value: "SUNDAY", label: "Sun" },
+  { value: "MONDAY", label: "Thứ Hai" },
+  { value: "TUESDAY", label: "Thứ Ba" },
+  { value: "WEDNESDAY", label: "Thứ Tư" },
+  { value: "THURSDAY", label: "Thứ Năm" },
+  { value: "FRIDAY", label: "Thứ Sáu" },
+  { value: "SATURDAY", label: "Thứ Bảy" },
+  { value: "SUNDAY", label: "Chủ Nhật" },
 ];
 
 const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -51,7 +51,7 @@ const PreferencesPage = () => {
       setForm(formForPreferences(response.data));
       setConfigured(response.data.configured);
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not load scheduling preferences."));
+      setError(getErrorMessage(requestError, "Không thể tải thiết lập lịch làm việc."));
     } finally {
       setLoading(false);
     }
@@ -84,9 +84,9 @@ const PreferencesPage = () => {
       const response = await api.put<SchedulingPreferences>("/api/v1/scheduling-preferences", form);
       setForm(formForPreferences(response.data));
       setConfigured(true);
-      setNotice("Scheduling preferences saved.");
+      setNotice("Đã lưu thiết lập lịch làm việc.");
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not save scheduling preferences."));
+      setError(getErrorMessage(requestError, "Không thể lưu thiết lập lịch làm việc."));
     } finally {
       setSaving(false);
     }
@@ -96,9 +96,9 @@ const PreferencesPage = () => {
     <section className={styles.page}>
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Scheduling rules</p>
-          <h1 className={styles.title}>Tell FlowTime when you can focus.</h1>
-          <p className={styles.subtitle}>These boundaries are hard constraints for every new draft plan.</p>
+          <p className={styles.eyebrow}>Quy tắc lập lịch</p>
+          <h1 className={styles.title}>Cho FlowTime biết khi nào bạn có thể tập trung.</h1>
+          <p className={styles.subtitle}>Các giới hạn này là điều kiện bắt buộc cho mọi bản kế hoạch mới.</p>
         </div>
       </div>
 
@@ -106,28 +106,28 @@ const PreferencesPage = () => {
       {notice && <p className={styles.alertSuccess} role="status">{notice}</p>}
 
       <form className={styles.panel} onSubmit={savePreferences}>
-        <h2 className={styles.panelTitle}>Work schedule {configured ? "" : "(not configured yet)"}</h2>
-        <p className={styles.panelHint}>Use an IANA timezone such as <code>Asia/Ho_Chi_Minh</code>. At least one working day is required.</p>
+        <h2 className={styles.panelTitle}>Lịch làm việc {configured ? "" : "(chưa được thiết lập)"}</h2>
+        <p className={styles.panelHint}>Dùng múi giờ IANA, ví dụ <code>Asia/Ho_Chi_Minh</code>. Cần chọn ít nhất một ngày làm việc.</p>
 
         {loading ? (
-          <p className={styles.empty}>Loading preferences…</p>
+          <p className={styles.empty}>Đang tải thiết lập…</p>
         ) : (
           <>
             <div className={styles.formGrid}>
               <label className={`${styles.field} ${styles.fullWidth}`}>
-                Timezone
+                Múi giờ
                 <input className={styles.input} onChange={(event) => setForm({ ...form, timezone: event.target.value })} required value={form.timezone} />
               </label>
               <label className={styles.field}>
-                Workday starts
+                Bắt đầu ngày làm việc
                 <input className={styles.input} onChange={(event) => setForm({ ...form, workdayStartTime: event.target.value })} required type="time" value={form.workdayStartTime} />
               </label>
               <label className={styles.field}>
-                Workday ends
+                Kết thúc ngày làm việc
                 <input className={styles.input} onChange={(event) => setForm({ ...form, workdayEndTime: event.target.value })} required type="time" value={form.workdayEndTime} />
               </label>
               <fieldset className={`${styles.field} ${styles.fullWidth}`}>
-                <legend>Working days</legend>
+                <legend>Ngày làm việc</legend>
                 <div className={styles.weekdayGrid}>
                   {week.map((day) => (
                     <label className={styles.checkboxLabel} key={day.value}>
@@ -138,20 +138,20 @@ const PreferencesPage = () => {
                 </div>
               </fieldset>
               <label className={styles.field}>
-                Focus session (min)
+                Một phiên tập trung (phút)
                 <input className={styles.input} max="240" min="5" onChange={(event) => setForm({ ...form, focusDurationMinutes: Number(event.target.value) })} required type="number" value={form.focusDurationMinutes} />
               </label>
               <label className={styles.field}>
-                Break (min)
+                Nghỉ giữa phiên (phút)
                 <input className={styles.input} max="240" min="0" onChange={(event) => setForm({ ...form, breakDurationMinutes: Number(event.target.value) })} required type="number" value={form.breakDurationMinutes} />
               </label>
               <label className={styles.field}>
-                Daily focus limit (min)
+                Giới hạn tập trung mỗi ngày (phút)
                 <input className={styles.input} max="1440" min="15" onChange={(event) => setForm({ ...form, dailyFocusLimit: Number(event.target.value) })} required type="number" value={form.dailyFocusLimit} />
               </label>
             </div>
             <div className={styles.actions}>
-              <button className={styles.primaryButton} disabled={saving} type="submit">{saving ? "Saving…" : "Save preferences"}</button>
+              <button className={styles.primaryButton} disabled={saving} type="submit">{saving ? "Đang lưu…" : "Lưu thiết lập"}</button>
             </div>
           </>
         )}
