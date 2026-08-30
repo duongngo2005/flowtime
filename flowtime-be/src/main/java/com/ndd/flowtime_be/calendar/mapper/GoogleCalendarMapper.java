@@ -20,8 +20,16 @@ public class GoogleCalendarMapper {
         target.setName(hasText(source.summary()) ? source.summary() : "Untitled calendar");
         target.setTimezone(hasText(source.timeZone()) ? source.timeZone() : "UTC");
         target.setPrimary(Boolean.TRUE.equals(source.primary()));
+        if (target.getId() == null) {
+            target.setBlocksScheduling(!isGoogleHolidayCalendar(source.id()));
+        }
         target.setLastSyncedAt(Instant.now());
         return target;
+    }
+
+    private boolean isGoogleHolidayCalendar(String googleCalendarId) {
+        return googleCalendarId != null
+                && googleCalendarId.toLowerCase().contains("#holiday@group.v.calendar.google.com");
     }
 
     private boolean hasText(String value) {

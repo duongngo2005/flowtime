@@ -1,6 +1,7 @@
 package com.ndd.flowtime_be.scheduling.service;
 
 import com.ndd.flowtime_be.calendar.repository.CalendarEventRepository;
+import com.ndd.flowtime_be.shared.time.VietnamTime;
 import com.ndd.flowtime_be.planning.entity.PlannedSlot;
 import com.ndd.flowtime_be.planning.service.PlanningReservationService;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
@@ -37,7 +38,7 @@ public class SchedulingEngine {
 
     @Transactional(readOnly = true)
     public SchedulingPreviewResponse preview(User user, SchedulingPreviewRequest request) {
-        ZoneId timezone = timezoneFor(user);
+        ZoneId timezone = VietnamTime.ZONE;
         Instant now = Instant.now(clock);
         LocalDate startDate = request.startDate() == null ? LocalDate.ofInstant(now, timezone) : request.startDate();
         LocalDate endDate = startDate.plusDays(request.days());
@@ -49,6 +50,7 @@ public class SchedulingEngine {
         List<BusyInterval> busyIntervals = calendarEventRepository
                 .findByUserAndStartAtLessThanAndEndAtGreaterThanOrderByStartAtAsc(user, to, from)
                 .stream()
+                .filter(event -> event.getCalendar() == null || event.getCalendar().isBlocksScheduling())
                 .filter(event -> !"cancelled".equalsIgnoreCase(event.getStatus()))
                 .map(event -> new BusyInterval(event.getStartAt(), event.getEndAt()))
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
@@ -357,14 +359,6 @@ public class SchedulingEngine {
             case MEDIUM -> 2;
             case LOW -> 3;
         };
-    }
-
-    private ZoneId timezoneFor(User user) {
-        try {
-            return ZoneId.of(user.getTimezone());
-        } catch (DateTimeException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Múi giờ của người dùng phải là một múi giờ IANA hợp lệ.");
-        }
     }
 
     private record FreeSlot(Instant startAt, Instant endAt, LocalDate date) {}

@@ -32,7 +32,6 @@ export type WorkingDay =
   | "SUNDAY";
 
 export interface SchedulingPreferences {
-  timezone: string;
   workdayStartTime: string;
   workdayEndTime: string;
   workingDays: WorkingDay[];

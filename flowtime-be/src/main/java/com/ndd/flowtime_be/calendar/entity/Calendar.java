@@ -42,6 +42,10 @@ public class Calendar {
     @Builder.Default
     private boolean primary = false;
 
+    @Column(name = "blocks_scheduling", nullable = false)
+    @Builder.Default
+    private boolean blocksScheduling = true;
+
     @Column(name = "last_synced_at")
     private Instant lastSyncedAt;
 }
