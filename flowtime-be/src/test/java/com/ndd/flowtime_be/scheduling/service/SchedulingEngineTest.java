@@ -10,14 +10,15 @@ import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewRequest;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewResponse;
+import com.ndd.flowtime_be.scheduling.dto.UnscheduledTaskReason;
 import com.ndd.flowtime_be.task.entity.Task;
 import com.ndd.flowtime_be.task.entity.TaskPriority;
 import com.ndd.flowtime_be.task.entity.TaskStatus;
 import com.ndd.flowtime_be.task.repository.TaskRepository;
 import com.ndd.flowtime_be.user.entity.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -45,10 +47,14 @@ class SchedulingEngineTest {
     @Mock
     private PlannedSlotRepository plannedSlotRepository;
 
-    @InjectMocks
     private SchedulingEngine schedulingEngine;
 
     private final User user = User.builder().id(1L).email("user@example.com").name("Test User").timezone("UTC").build();
+
+    @BeforeEach
+    void setUp() {
+        schedulingEngine = schedulingEngineAt(Instant.parse("2026-09-01T00:00:00Z"));
+    }
 
     @Test
     void createsSplitSuggestionsAroundBusyCalendarEvents() {
@@ -135,6 +141,117 @@ class SchedulingEngineTest {
         assertEquals(List.of(2L), response.suggestions().stream().map(ScheduledBlockSuggestion::taskId).toList());
     }
 
+    @Test
+    void doesNotSchedulePastTimeTodayAndRoundsUpToTheNextMinute() {
+        Task task = task(1L, "Write summary", 30, TaskPriority.HIGH, false, null, null, null);
+        stubData(List.of(task), List.of(), preference(240));
+        SchedulingEngine engine = schedulingEngineAt(Instant.parse("2026-09-07T09:00:30Z"));
+
+        SchedulingPreviewResponse response = engine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1)
+        );
+
+        assertEquals(Instant.parse("2026-09-07T09:01:00Z"), response.suggestions().getFirst().startAt());
+    }
+
+    @Test
+    void doesNotLetCurrentTimeChangeFutureWorkdayStart() {
+        Task task = task(1L, "Write summary", 30, TaskPriority.HIGH, false, null, null, null);
+        SchedulingPreference preference = preference(240);
+        preference.setWorkingDays(EnumSet.of(DayOfWeek.TUESDAY));
+        stubData(List.of(task), List.of(), preference);
+        SchedulingEngine engine = schedulingEngineAt(Instant.parse("2026-09-07T16:50:30Z"));
+
+        SchedulingPreviewResponse response = engine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 8), 1)
+        );
+
+        assertEquals(Instant.parse("2026-09-08T09:00:00Z"), response.suggestions().getFirst().startAt());
+    }
+
+    @Test
+    void skipsPastDaysWhenTheRequestedWindowStartsBeforeToday() {
+        Task task = task(1L, "Write summary", 30, TaskPriority.HIGH, false, null, null, null);
+        SchedulingPreference preference = preference(240);
+        preference.setWorkingDays(EnumSet.of(DayOfWeek.SUNDAY, DayOfWeek.MONDAY));
+        stubData(List.of(task), List.of(), preference);
+        SchedulingEngine engine = schedulingEngineAt(Instant.parse("2026-09-07T10:00:00Z"));
+
+        SchedulingPreviewResponse response = engine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 6), 2)
+        );
+
+        assertEquals(Instant.parse("2026-09-07T10:00:00Z"), response.suggestions().getFirst().startAt());
+    }
+
+    @Test
+    void doesNotScheduleWholeTaskWhenDeadlineLeavesTooLittleTime() {
+        Task task = task(1L, "Send report", 60, TaskPriority.HIGH, false, null, null, null);
+        task.setDeadline(Instant.parse("2026-09-07T09:30:00Z"));
+        stubData(List.of(task), List.of(), preference(240));
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1)
+        );
+
+        assertEquals(0, response.suggestions().size());
+        assertEquals(UnscheduledTaskReason.NO_AVAILABLE_SLOT, response.unscheduledTasks().getFirst().reason());
+    }
+
+    @Test
+    void schedulesTaskWhenItsSlotEndsExactlyAtDeadline() {
+        Task task = task(1L, "Send report", 60, TaskPriority.HIGH, false, null, null, null);
+        task.setDeadline(Instant.parse("2026-09-07T10:00:00Z"));
+        stubData(List.of(task), List.of(), preference(240));
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1)
+        );
+
+        assertEquals(1, response.suggestions().size());
+        assertEquals(Instant.parse("2026-09-07T10:00:00Z"), response.suggestions().getFirst().endAt());
+    }
+
+    @Test
+    void marksTaskWithElapsedDeadlineUsingDomainReason() {
+        Task task = task(1L, "Send report", 60, TaskPriority.HIGH, false, null, null, null);
+        task.setDeadline(Instant.parse("2026-09-07T08:59:00Z"));
+        stubData(List.of(task), List.of(), preference(240));
+        SchedulingEngine engine = schedulingEngineAt(Instant.parse("2026-09-07T09:00:00Z"));
+
+        SchedulingPreviewResponse response = engine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1)
+        );
+
+        assertEquals(0, response.suggestions().size());
+        assertEquals(UnscheduledTaskReason.DEADLINE_PASSED, response.unscheduledTasks().getFirst().reason());
+    }
+
+    @Test
+    void neverCreatesSplitSlotAfterDeadlineAndReportsRemainingWork() {
+        Task task = task(1L, "Prepare slides", 120, TaskPriority.HIGH, true, 30, null, null);
+        task.setDeadline(Instant.parse("2026-09-07T10:10:00Z"));
+        stubData(List.of(task), List.of(), preference(240));
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(
+                user,
+                new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1)
+        );
+
+        assertEquals(1, response.suggestions().size());
+        assertEquals(Instant.parse("2026-09-07T09:50:00Z"), response.suggestions().getFirst().endAt());
+        assertEquals(UnscheduledTaskReason.INSUFFICIENT_DURATION, response.unscheduledTasks().getFirst().reason());
+        assertEquals(70, response.unscheduledTasks().getFirst().unscheduledMinutes());
+        assertTrue(response.suggestions().stream()
+                .allMatch(suggestion -> !suggestion.endAt().isAfter(task.getDeadline())));
+    }
+
     private void stubData(List<Task> tasks, List<CalendarEvent> events, SchedulingPreference preference) {
         stubData(tasks, events, preference, List.of());
     }
@@ -165,6 +282,16 @@ class SchedulingEngineTest {
                 .breakDurationMinutes(10)
                 .dailyFocusLimit(dailyLimit)
                 .build();
+    }
+
+    private SchedulingEngine schedulingEngineAt(Instant now) {
+        return new SchedulingEngine(
+                taskRepository,
+                calendarEventRepository,
+                preferenceRepository,
+                plannedSlotRepository,
+                Clock.fixed(now, ZoneOffset.UTC)
+        );
     }
 
     private Task task(

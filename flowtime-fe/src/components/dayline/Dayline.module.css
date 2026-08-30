@@ -45,6 +45,16 @@
   background-color: rgba(221, 231, 230, 0.15);
 }
 
+.outsideNow {
+  width: fit-content;
+  margin: -2px 0 -4px;
+  color: var(--color-oxide-copper, #B36B45);
+  font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
 .emptyState {
   margin: 0 auto;
   font-family: var(--font-mono, 'IBM Plex Mono', monospace);

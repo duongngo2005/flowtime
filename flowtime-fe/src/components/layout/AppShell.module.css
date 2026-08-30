@@ -1,0 +1,79 @@
+.shell {
+  min-height: 100vh;
+  background: var(--color-paper);
+  color: var(--color-ink-night);
+}
+
+.header {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 5vw;
+  border-bottom: 1px solid var(--color-fog);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.brand {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+}
+
+.navigation {
+  display: flex;
+  gap: 4px;
+}
+
+.navLink,
+.signOutButton {
+  border: 0;
+  border-radius: 4px;
+  color: var(--color-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: 600 13px var(--font-body);
+  padding: 9px 11px;
+  text-decoration: none;
+}
+
+.navLink:hover,
+.activeNavLink {
+  color: var(--color-ink-night);
+  background: var(--color-paper);
+}
+
+.signOutButton {
+  margin-left: auto;
+  color: var(--color-oxide-copper);
+}
+
+.main {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 42px 24px 64px;
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 14px 20px;
+  }
+
+  .navigation {
+    order: 3;
+    width: 100%;
+  }
+
+  .signOutButton {
+    margin-left: auto;
+  }
+
+  .main {
+    padding: 28px 16px 48px;
+  }
+}

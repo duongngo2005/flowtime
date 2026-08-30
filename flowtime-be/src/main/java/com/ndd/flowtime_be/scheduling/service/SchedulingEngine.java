@@ -10,6 +10,7 @@ import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewRequest;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewResponse;
+import com.ndd.flowtime_be.scheduling.dto.UnscheduledTaskReason;
 import com.ndd.flowtime_be.scheduling.dto.UnscheduledTaskSuggestion;
 import com.ndd.flowtime_be.task.entity.Task;
 import com.ndd.flowtime_be.task.entity.TaskPriority;
@@ -34,11 +35,13 @@ public class SchedulingEngine {
     private final CalendarEventRepository calendarEventRepository;
     private final SchedulingPreferenceRepository preferenceRepository;
     private final PlannedSlotRepository plannedSlotRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public SchedulingPreviewResponse preview(User user, SchedulingPreviewRequest request) {
         ZoneId timezone = timezoneFor(user);
-        LocalDate startDate = request.startDate() == null ? LocalDate.now(timezone) : request.startDate();
+        Instant now = Instant.now(clock);
+        LocalDate startDate = request.startDate() == null ? LocalDate.ofInstant(now, timezone) : request.startDate();
         LocalDate endDate = startDate.plusDays(request.days());
         Instant from = startDate.atStartOfDay(timezone).toInstant();
         Instant to = endDate.atStartOfDay(timezone).toInstant();
@@ -50,7 +53,7 @@ public class SchedulingEngine {
                 .stream()
                 .filter(event -> !"cancelled".equalsIgnoreCase(event.getStatus()))
                 .toList();
-        List<FreeSlot> freeSlots = buildFreeSlots(startDate, request.days(), timezone, preference, busyEvents);
+        List<FreeSlot> freeSlots = buildFreeSlots(startDate, request.days(), timezone, preference, busyEvents, now);
         Map<LocalDate, Integer> scheduledMinutesByDay = new HashMap<>();
         List<ScheduledBlockSuggestion> suggestions = new ArrayList<>();
         List<UnscheduledTaskSuggestion> unscheduled = new ArrayList<>();
@@ -70,9 +73,7 @@ public class SchedulingEngine {
                         task.getId(),
                         task.getTitle(),
                         remaining,
-                        task.isSplitAllowed()
-                                ? "Not enough eligible free time within the selected horizon."
-                                : "No eligible continuous free slot can fit this task."
+                        unscheduledReason(task, now)
                 ));
             }
         }
@@ -82,7 +83,7 @@ public class SchedulingEngine {
                 startDate,
                 endDate,
                 timezone.getId(),
-                Instant.now(),
+                now,
                 List.copyOf(suggestions),
                 List.copyOf(unscheduled)
         );
@@ -114,7 +115,7 @@ public class SchedulingEngine {
             List<ScheduledBlockSuggestion> suggestions) {
         for (int index = 0; index < freeSlots.size(); index++) {
             FreeSlot slot = freeSlots.get(index);
-            FreeSlot eligibleSlot = constrainToPreferredTime(slot, task, timezone);
+            FreeSlot eligibleSlot = constrainToTaskConstraints(slot, task, timezone);
             if (eligibleSlot == null || availableDailyMinutes(slot, scheduledMinutesByDay, preference) < remaining) {
                 continue;
             }
@@ -144,7 +145,7 @@ public class SchedulingEngine {
 
         for (int index = 0; index < freeSlots.size() && remaining > 0; index++) {
             FreeSlot slot = freeSlots.get(index);
-            FreeSlot eligibleSlot = constrainToPreferredTime(slot, task, timezone);
+            FreeSlot eligibleSlot = constrainToTaskConstraints(slot, task, timezone);
             if (eligibleSlot == null) {
                 continue;
             }
@@ -173,17 +174,27 @@ public class SchedulingEngine {
             int days,
             ZoneId timezone,
             SchedulingPreference preference,
-            List<CalendarEvent> busyEvents) {
+            List<CalendarEvent> busyEvents,
+            Instant now) {
         List<FreeSlot> slots = new ArrayList<>();
+        LocalDate today = LocalDate.ofInstant(now, timezone);
         for (int offset = 0; offset < days; offset++) {
             LocalDate date = startDate.plusDays(offset);
+            if (date.isBefore(today)) {
+                continue;
+            }
             if (!preference.getWorkingDays().contains(date.getDayOfWeek())) {
                 continue;
             }
 
             Instant workdayStart = date.atTime(preference.getWorkdayStartTime()).atZone(timezone).toInstant();
             Instant workdayEnd = date.atTime(preference.getWorkdayEndTime()).atZone(timezone).toInstant();
-            slots.addAll(subtractBusyEvents(date, workdayStart, workdayEnd, busyEvents));
+            Instant effectiveStart = date.equals(today) && now.isAfter(workdayStart)
+                    ? ceilToMinute(now)
+                    : workdayStart;
+            if (effectiveStart.isBefore(workdayEnd)) {
+                slots.addAll(subtractBusyEvents(date, effectiveStart, workdayEnd, busyEvents));
+            }
         }
         return slots;
     }
@@ -220,7 +231,7 @@ public class SchedulingEngine {
         return result;
     }
 
-    private FreeSlot constrainToPreferredTime(FreeSlot slot, Task task, ZoneId timezone) {
+    private FreeSlot constrainToTaskConstraints(FreeSlot slot, Task task, ZoneId timezone) {
         Instant startAt = slot.startAt();
         Instant endAt = slot.endAt();
         if (task.getPreferredStartTime() != null) {
@@ -235,7 +246,24 @@ public class SchedulingEngine {
                 endAt = preferredEnd;
             }
         }
+        if (task.getDeadline() != null && task.getDeadline().isBefore(endAt)) {
+            endAt = task.getDeadline();
+        }
         return endAt.isAfter(startAt) ? new FreeSlot(startAt, endAt, slot.date()) : null;
+    }
+
+    private Instant ceilToMinute(Instant instant) {
+        Instant truncated = instant.truncatedTo(ChronoUnit.MINUTES);
+        return instant.equals(truncated) ? instant : truncated.plus(1, ChronoUnit.MINUTES);
+    }
+
+    private UnscheduledTaskReason unscheduledReason(Task task, Instant now) {
+        if (task.getDeadline() != null && !task.getDeadline().isAfter(now)) {
+            return UnscheduledTaskReason.DEADLINE_PASSED;
+        }
+        return task.isSplitAllowed()
+                ? UnscheduledTaskReason.INSUFFICIENT_DURATION
+                : UnscheduledTaskReason.NO_AVAILABLE_SLOT;
     }
 
     private void reserveSlot(

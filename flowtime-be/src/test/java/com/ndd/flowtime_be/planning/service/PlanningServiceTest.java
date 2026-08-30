@@ -8,6 +8,7 @@ import com.ndd.flowtime_be.planning.repository.PlanningUnscheduledTaskRepository
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewRequest;
 import com.ndd.flowtime_be.scheduling.dto.SchedulingPreviewResponse;
+import com.ndd.flowtime_be.scheduling.dto.UnscheduledTaskReason;
 import com.ndd.flowtime_be.scheduling.dto.UnscheduledTaskSuggestion;
 import com.ndd.flowtime_be.scheduling.service.SchedulingEngine;
 import com.ndd.flowtime_be.user.entity.User;
@@ -183,7 +184,12 @@ class PlanningServiceTest {
                         Instant.parse("2026-09-07T10:00:00Z"),
                         60
                 )),
-                List.of(new UnscheduledTaskSuggestion(2L, "Read notes", 60, "Not enough free time."))
+                List.of(new UnscheduledTaskSuggestion(
+                        2L,
+                        "Read notes",
+                        60,
+                        UnscheduledTaskReason.INSUFFICIENT_DURATION
+                ))
         );
     }
 
