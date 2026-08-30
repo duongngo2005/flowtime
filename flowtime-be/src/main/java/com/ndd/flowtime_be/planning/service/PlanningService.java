@@ -144,7 +144,7 @@ public class PlanningService {
                 .taskId(suggestion.taskId())
                 .taskTitle(suggestion.taskTitle())
                 .unscheduledMinutes(suggestion.unscheduledMinutes())
-                .reason(suggestion.reason())
+                .reason(suggestion.reason().name())
                 .build();
     }
 

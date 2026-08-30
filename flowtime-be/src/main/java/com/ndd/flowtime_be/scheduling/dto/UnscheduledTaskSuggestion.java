@@ -4,5 +4,5 @@ public record UnscheduledTaskSuggestion(
         Long taskId,
         String taskTitle,
         int unscheduledMinutes,
-        String reason
+        UnscheduledTaskReason reason
 ) {}
