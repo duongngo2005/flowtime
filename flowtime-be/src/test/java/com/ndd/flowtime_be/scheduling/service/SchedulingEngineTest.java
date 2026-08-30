@@ -2,9 +2,11 @@ package com.ndd.flowtime_be.scheduling.service;
 
 import com.ndd.flowtime_be.calendar.entity.CalendarEvent;
 import com.ndd.flowtime_be.calendar.repository.CalendarEventRepository;
+import com.ndd.flowtime_be.planning.entity.PlannedSlot;
 import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
+import com.ndd.flowtime_be.planning.entity.PlanningSession;
 import com.ndd.flowtime_be.planning.entity.PlanningSessionStatus;
-import com.ndd.flowtime_be.planning.repository.PlannedSlotRepository;
+import com.ndd.flowtime_be.planning.service.PlanningReservationService;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
@@ -45,7 +47,7 @@ class SchedulingEngineTest {
     private SchedulingPreferenceRepository preferenceRepository;
 
     @Mock
-    private PlannedSlotRepository plannedSlotRepository;
+    private PlanningReservationService planningReservationService;
 
     private SchedulingEngine schedulingEngine;
 
@@ -131,14 +133,48 @@ class SchedulingEngineTest {
     }
 
     @Test
-    void excludesTasksWithActivePlanningCommitments() {
-        Task committedTask = task(1L, "Already scheduled", 60, TaskPriority.HIGH, false, null, null, null);
-        Task availableTask = task(2L, "Available", 60, TaskPriority.LOW, false, null, null, null);
-        stubData(List.of(committedTask, availableTask), List.of(), preference(240), List.of(1L));
+    void schedulesOnlyTheRemainingDurationAfterHardCommitments() {
+        Task task = task(1L, "Already scheduled", 120, TaskPriority.HIGH, false, null, null, null);
+        PlannedSlot reservation = reservation(1L, Instant.parse("2026-09-07T09:00:00Z"), Instant.parse("2026-09-07T10:00:00Z"), 60);
+        stubData(List.of(task), List.of(), preference(240), List.of(reservation));
 
         SchedulingPreviewResponse response = schedulingEngine.preview(user, new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1));
 
-        assertEquals(List.of(2L), response.suggestions().stream().map(ScheduledBlockSuggestion::taskId).toList());
+        assertEquals(60, response.suggestions().stream().mapToInt(ScheduledBlockSuggestion::durationMinutes).sum());
+        assertEquals(Instant.parse("2026-09-07T10:00:00Z"), response.suggestions().getFirst().startAt());
+    }
+
+    @Test
+    void respectsPerTaskDailyCapAcrossMultipleDays() {
+        Task task = task(1L, "SIMI", 720, TaskPriority.HIGH, true, null, null, null);
+        task.setMaxDailyMinutes(180);
+        SchedulingPreference preference = preference(480);
+        preference.setWorkingDays(EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY));
+        stubData(List.of(task), List.of(), preference);
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(user, new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 4));
+
+        assertEquals(720, response.suggestions().stream().mapToInt(ScheduledBlockSuggestion::durationMinutes).sum());
+        assertTrue(response.suggestions().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        suggestion -> LocalDate.ofInstant(suggestion.startAt(), ZoneOffset.UTC),
+                        java.util.stream.Collectors.summingInt(ScheduledBlockSuggestion::durationMinutes)
+                ))
+                .values()
+                .stream()
+                .allMatch(minutes -> minutes <= 180));
+    }
+
+    @Test
+    void leavesResidualWorkUnscheduledWhenItIsShorterThanMinimumSession() {
+        Task task = task(1L, "Read chapter", 100, TaskPriority.HIGH, true, 60, null, null);
+        stubData(List.of(task), List.of(), preference(240));
+
+        SchedulingPreviewResponse response = schedulingEngine.preview(user, new SchedulingPreviewRequest(LocalDate.of(2026, 9, 7), 1));
+
+        assertEquals(60, response.suggestions().stream().mapToInt(ScheduledBlockSuggestion::durationMinutes).sum());
+        assertEquals(40, response.unscheduledTasks().getFirst().unscheduledMinutes());
+        assertTrue(response.suggestions().stream().allMatch(slot -> slot.durationMinutes() >= 60));
     }
 
     @Test
@@ -260,16 +296,12 @@ class SchedulingEngineTest {
             List<Task> tasks,
             List<CalendarEvent> events,
             SchedulingPreference preference,
-            List<Long> committedTaskIds) {
+            List<PlannedSlot> hardReservations) {
         when(taskRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(tasks);
         when(calendarEventRepository.findByUserAndStartAtLessThanAndEndAtGreaterThanOrderByStartAtAsc(any(), any(), any()))
                 .thenReturn(events);
         when(preferenceRepository.findByUser(user)).thenReturn(Optional.of(preference));
-        when(plannedSlotRepository.findTaskIdsWithActiveCommitments(
-                user,
-                PlannedSlotStatus.REMOVED,
-                PlanningSessionStatus.CANCELLED
-        )).thenReturn(committedTaskIds);
+        when(planningReservationService.hardReservationsFor(user)).thenReturn(hardReservations);
     }
 
     private SchedulingPreference preference(int dailyLimit) {
@@ -289,7 +321,7 @@ class SchedulingEngineTest {
                 taskRepository,
                 calendarEventRepository,
                 preferenceRepository,
-                plannedSlotRepository,
+                planningReservationService,
                 Clock.fixed(now, ZoneOffset.UTC)
         );
     }
@@ -315,6 +347,19 @@ class SchedulingEngineTest {
                 .preferredStartTime(preferredStart)
                 .preferredEndTime(preferredEnd)
                 .createdAt(Instant.parse("2026-09-01T09:00:00Z"))
+                .build();
+    }
+
+    private PlannedSlot reservation(Long taskId, Instant startAt, Instant endAt, int durationMinutes) {
+        return PlannedSlot.builder()
+                .id(100L)
+                .planningSession(PlanningSession.builder().status(PlanningSessionStatus.APPROVED).build())
+                .taskId(taskId)
+                .taskTitle("Reserved")
+                .startAt(startAt)
+                .endAt(endAt)
+                .durationMinutes(durationMinutes)
+                .status(PlannedSlotStatus.ACCEPTED)
                 .build();
     }
 }

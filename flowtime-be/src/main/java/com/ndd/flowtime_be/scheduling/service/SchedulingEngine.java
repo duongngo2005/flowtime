@@ -1,10 +1,8 @@
 package com.ndd.flowtime_be.scheduling.service;
 
-import com.ndd.flowtime_be.calendar.entity.CalendarEvent;
 import com.ndd.flowtime_be.calendar.repository.CalendarEventRepository;
-import com.ndd.flowtime_be.planning.entity.PlannedSlotStatus;
-import com.ndd.flowtime_be.planning.entity.PlanningSessionStatus;
-import com.ndd.flowtime_be.planning.repository.PlannedSlotRepository;
+import com.ndd.flowtime_be.planning.entity.PlannedSlot;
+import com.ndd.flowtime_be.planning.service.PlanningReservationService;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.scheduling.dto.ScheduledBlockSuggestion;
@@ -34,7 +32,7 @@ public class SchedulingEngine {
     private final TaskRepository taskRepository;
     private final CalendarEventRepository calendarEventRepository;
     private final SchedulingPreferenceRepository preferenceRepository;
-    private final PlannedSlotRepository plannedSlotRepository;
+    private final PlanningReservationService planningReservationService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -48,23 +46,32 @@ public class SchedulingEngine {
         SchedulingPreference preference = preferenceRepository.findByUser(user)
                 .orElseGet(() -> SchedulingPreference.builder().user(user).build());
 
-        List<CalendarEvent> busyEvents = calendarEventRepository
+        List<BusyInterval> busyIntervals = calendarEventRepository
                 .findByUserAndStartAtLessThanAndEndAtGreaterThanOrderByStartAtAsc(user, to, from)
                 .stream()
                 .filter(event -> !"cancelled".equalsIgnoreCase(event.getStatus()))
-                .toList();
-        List<FreeSlot> freeSlots = buildFreeSlots(startDate, request.days(), timezone, preference, busyEvents, now);
-        Map<LocalDate, Integer> scheduledMinutesByDay = new HashMap<>();
+                .map(event -> new BusyInterval(event.getStartAt(), event.getEndAt()))
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+        List<PlannedSlot> hardReservations = planningReservationService.hardReservationsFor(user);
+        hardReservations.stream()
+                .map(slot -> new BusyInterval(slot.getStartAt(), slot.getEndAt()))
+                .forEach(busyIntervals::add);
+        busyIntervals.sort(Comparator.comparing(BusyInterval::startAt));
+
+        List<FreeSlot> freeSlots = buildFreeSlots(startDate, request.days(), timezone, preference, busyIntervals, now);
+        Map<LocalDate, Integer> scheduledMinutesByDay = scheduledMinutesByDay(hardReservations, timezone);
+        Map<TaskDay, Integer> scheduledMinutesByTaskAndDay = scheduledMinutesByTaskAndDay(hardReservations, timezone);
         List<ScheduledBlockSuggestion> suggestions = new ArrayList<>();
         List<UnscheduledTaskSuggestion> unscheduled = new ArrayList<>();
 
-        for (Task task : schedulableTasks(user)) {
-            int remaining = task.getEstimatedDuration();
+        for (SchedulableTask schedulableTask : schedulableTasks(user, hardReservations)) {
+            Task task = schedulableTask.task();
+            int remaining = schedulableTask.remainingDuration();
             if (task.isSplitAllowed()) {
-                remaining = scheduleSplitTask(task, remaining, freeSlots, scheduledMinutesByDay, preference,
+                remaining = scheduleSplitTask(task, remaining, freeSlots, scheduledMinutesByDay, scheduledMinutesByTaskAndDay, preference,
                         timezone, suggestions);
             } else {
-                remaining = scheduleWholeTask(task, remaining, freeSlots, scheduledMinutesByDay, preference,
+                remaining = scheduleWholeTask(task, remaining, freeSlots, scheduledMinutesByDay, scheduledMinutesByTaskAndDay, preference,
                         timezone, suggestions);
             }
 
@@ -89,19 +96,20 @@ public class SchedulingEngine {
         );
     }
 
-    private List<Task> schedulableTasks(User user) {
-        Set<Long> committedTaskIds = Set.copyOf(plannedSlotRepository.findTaskIdsWithActiveCommitments(
-                user,
-                PlannedSlotStatus.REMOVED,
-                PlanningSessionStatus.CANCELLED
-        ));
+    private List<SchedulableTask> schedulableTasks(User user, List<PlannedSlot> hardReservations) {
+        Map<Long, Integer> committedMinutesByTask = hardReservations.stream()
+                .collect(HashMap::new, (minutes, slot) -> minutes.merge(slot.getTaskId(), slot.getDurationMinutes(), Integer::sum), HashMap::putAll);
         return taskRepository.findByUserOrderByCreatedAtDesc(user).stream()
                 .filter(task -> task.getStatus() == TaskStatus.TODO || task.getStatus() == TaskStatus.IN_PROGRESS)
-                .filter(task -> !committedTaskIds.contains(task.getId()))
+                .map(task -> new SchedulableTask(
+                        task,
+                        Math.max(0, task.getEstimatedDuration() - committedMinutesByTask.getOrDefault(task.getId(), 0))
+                ))
+                .filter(task -> task.remainingDuration() > 0)
                 .sorted(Comparator
-                        .comparing(Task::getDeadline, Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(task -> priorityRank(task.getPriority()))
-                        .thenComparing(Task::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                        .comparing((SchedulableTask task) -> task.task().getDeadline(), Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(task -> priorityRank(task.task().getPriority()))
+                        .thenComparing(task -> task.task().getCreatedAt(), Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
     }
 
@@ -110,13 +118,14 @@ public class SchedulingEngine {
             int remaining,
             List<FreeSlot> freeSlots,
             Map<LocalDate, Integer> scheduledMinutesByDay,
+            Map<TaskDay, Integer> scheduledMinutesByTaskAndDay,
             SchedulingPreference preference,
             ZoneId timezone,
             List<ScheduledBlockSuggestion> suggestions) {
         for (int index = 0; index < freeSlots.size(); index++) {
             FreeSlot slot = freeSlots.get(index);
             FreeSlot eligibleSlot = constrainToTaskConstraints(slot, task, timezone);
-            if (eligibleSlot == null || availableDailyMinutes(slot, scheduledMinutesByDay, preference) < remaining) {
+            if (eligibleSlot == null || availableMinutes(task, slot, scheduledMinutesByDay, scheduledMinutesByTaskAndDay, preference) < remaining) {
                 continue;
             }
 
@@ -124,6 +133,7 @@ public class SchedulingEngine {
                 Instant endAt = eligibleSlot.startAt().plus(remaining, ChronoUnit.MINUTES);
                 addSuggestion(task, eligibleSlot.startAt(), endAt, remaining, suggestions);
                 scheduledMinutesByDay.merge(slot.date(), remaining, Integer::sum);
+                scheduledMinutesByTaskAndDay.merge(new TaskDay(task.getId(), slot.date()), remaining, Integer::sum);
                 reserveSlot(freeSlots, index, eligibleSlot.startAt(), endAt, preference.getBreakDurationMinutes());
                 return 0;
             }
@@ -136,14 +146,16 @@ public class SchedulingEngine {
             int remaining,
             List<FreeSlot> freeSlots,
             Map<LocalDate, Integer> scheduledMinutesByDay,
+            Map<TaskDay, Integer> scheduledMinutesByTaskAndDay,
             SchedulingPreference preference,
             ZoneId timezone,
             List<ScheduledBlockSuggestion> suggestions) {
-        int minimumSession = task.getMinSessionDuration() == null
-                ? Math.min(task.getEstimatedDuration(), preference.getFocusDurationMinutes())
-                : task.getMinSessionDuration();
+        int minimumSession = task.getMinSessionDuration() == null ? 1 : task.getMinSessionDuration();
 
         for (int index = 0; index < freeSlots.size() && remaining > 0; index++) {
+            if (remaining < minimumSession) {
+                break;
+            }
             FreeSlot slot = freeSlots.get(index);
             FreeSlot eligibleSlot = constrainToTaskConstraints(slot, task, timezone);
             if (eligibleSlot == null) {
@@ -152,16 +164,20 @@ public class SchedulingEngine {
 
             int available = Math.min(
                     minutesBetween(eligibleSlot.startAt(), eligibleSlot.endAt()),
-                    availableDailyMinutes(slot, scheduledMinutesByDay, preference)
+                    availableMinutes(task, slot, scheduledMinutesByDay, scheduledMinutesByTaskAndDay, preference)
             );
-            int desired = desiredSessionMinutes(remaining, minimumSession, preference.getFocusDurationMinutes());
-            if (available < desired) {
+            int desired = Math.min(
+                    desiredSessionMinutes(remaining, minimumSession, preference.getFocusDurationMinutes()),
+                    available
+            );
+            if (desired < minimumSession) {
                 continue;
             }
 
             Instant endAt = eligibleSlot.startAt().plus(desired, ChronoUnit.MINUTES);
             addSuggestion(task, eligibleSlot.startAt(), endAt, desired, suggestions);
             scheduledMinutesByDay.merge(slot.date(), desired, Integer::sum);
+            scheduledMinutesByTaskAndDay.merge(new TaskDay(task.getId(), slot.date()), desired, Integer::sum);
             reserveSlot(freeSlots, index, eligibleSlot.startAt(), endAt, preference.getBreakDurationMinutes());
             remaining -= desired;
             index--;
@@ -174,7 +190,7 @@ public class SchedulingEngine {
             int days,
             ZoneId timezone,
             SchedulingPreference preference,
-            List<CalendarEvent> busyEvents,
+            List<BusyInterval> busyIntervals,
             Instant now) {
         List<FreeSlot> slots = new ArrayList<>();
         LocalDate today = LocalDate.ofInstant(now, timezone);
@@ -193,28 +209,28 @@ public class SchedulingEngine {
                     ? ceilToMinute(now)
                     : workdayStart;
             if (effectiveStart.isBefore(workdayEnd)) {
-                slots.addAll(subtractBusyEvents(date, effectiveStart, workdayEnd, busyEvents));
+                slots.addAll(subtractBusyIntervals(date, effectiveStart, workdayEnd, busyIntervals));
             }
         }
         return slots;
     }
 
-    private List<FreeSlot> subtractBusyEvents(
+    private List<FreeSlot> subtractBusyIntervals(
             LocalDate date,
             Instant workdayStart,
             Instant workdayEnd,
-            List<CalendarEvent> busyEvents) {
+            List<BusyInterval> busyIntervals) {
         List<FreeSlot> result = new ArrayList<>();
         Instant cursor = workdayStart;
-        for (CalendarEvent event : busyEvents) {
-            if (!event.getStartAt().isBefore(workdayEnd)) {
+        for (BusyInterval interval : busyIntervals) {
+            if (!interval.startAt().isBefore(workdayEnd)) {
                 break;
             }
-            if (!event.getEndAt().isAfter(workdayStart)) {
+            if (!interval.endAt().isAfter(workdayStart)) {
                 continue;
             }
-            Instant eventStart = event.getStartAt().isBefore(workdayStart) ? workdayStart : event.getStartAt();
-            Instant eventEnd = event.getEndAt().isAfter(workdayEnd) ? workdayEnd : event.getEndAt();
+            Instant eventStart = interval.startAt().isBefore(workdayStart) ? workdayStart : interval.startAt();
+            Instant eventEnd = interval.endAt().isAfter(workdayEnd) ? workdayEnd : interval.endAt();
             if (!eventEnd.isAfter(cursor)) {
                 continue;
             }
@@ -285,18 +301,40 @@ public class SchedulingEngine {
     }
 
     private int desiredSessionMinutes(int remaining, int minimumSession, int focusDuration) {
-        int desired = Math.max(minimumSession, Math.min(remaining, focusDuration));
-        if (remaining > desired && remaining - desired < minimumSession) {
-            return remaining;
-        }
-        return desired;
+        return Math.min(remaining, Math.max(minimumSession, Math.min(remaining, focusDuration)));
     }
 
-    private int availableDailyMinutes(
+    private int availableMinutes(
+            Task task,
             FreeSlot slot,
             Map<LocalDate, Integer> scheduledMinutesByDay,
+            Map<TaskDay, Integer> scheduledMinutesByTaskAndDay,
             SchedulingPreference preference) {
-        return preference.getDailyFocusLimit() - scheduledMinutesByDay.getOrDefault(slot.date(), 0);
+        int globalAvailable = preference.getDailyFocusLimit() - scheduledMinutesByDay.getOrDefault(slot.date(), 0);
+        if (task.getMaxDailyMinutes() == null) {
+            return globalAvailable;
+        }
+        int taskAvailable = task.getMaxDailyMinutes()
+                - scheduledMinutesByTaskAndDay.getOrDefault(new TaskDay(task.getId(), slot.date()), 0);
+        return Math.min(globalAvailable, taskAvailable);
+    }
+
+    private Map<LocalDate, Integer> scheduledMinutesByDay(List<PlannedSlot> hardReservations, ZoneId timezone) {
+        Map<LocalDate, Integer> minutes = new HashMap<>();
+        for (PlannedSlot slot : hardReservations) {
+            LocalDate date = LocalDate.ofInstant(slot.getStartAt(), timezone);
+            minutes.merge(date, slot.getDurationMinutes(), Integer::sum);
+        }
+        return minutes;
+    }
+
+    private Map<TaskDay, Integer> scheduledMinutesByTaskAndDay(List<PlannedSlot> hardReservations, ZoneId timezone) {
+        Map<TaskDay, Integer> minutes = new HashMap<>();
+        for (PlannedSlot slot : hardReservations) {
+            TaskDay taskDay = new TaskDay(slot.getTaskId(), LocalDate.ofInstant(slot.getStartAt(), timezone));
+            minutes.merge(taskDay, slot.getDurationMinutes(), Integer::sum);
+        }
+        return minutes;
     }
 
     private int minutesBetween(Instant start, Instant end) {
@@ -325,9 +363,15 @@ public class SchedulingEngine {
         try {
             return ZoneId.of(user.getTimezone());
         } catch (DateTimeException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User timezone must be a valid IANA timezone.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Múi giờ của người dùng phải là một múi giờ IANA hợp lệ.");
         }
     }
 
     private record FreeSlot(Instant startAt, Instant endAt, LocalDate date) {}
+
+    private record BusyInterval(Instant startAt, Instant endAt) {}
+
+    private record SchedulableTask(Task task, int remainingDuration) {}
+
+    private record TaskDay(Long taskId, LocalDate date) {}
 }

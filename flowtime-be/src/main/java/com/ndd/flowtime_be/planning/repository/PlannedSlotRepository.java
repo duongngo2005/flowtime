@@ -22,16 +22,17 @@ public interface PlannedSlotRepository extends JpaRepository<PlannedSlot, Long> 
     Optional<PlannedSlot> findByIdAndPlanningSessionId(Long id, Long planningSessionId);
 
     @Query("""
-            SELECT DISTINCT slot.taskId
+            SELECT slot
             FROM PlannedSlot slot
             WHERE slot.planningSession.user = :user
-              AND slot.status <> :removedStatus
-              AND slot.planningSession.status <> :cancelledStatus
+              AND slot.status = :acceptedStatus
+              AND slot.planningSession.status IN :reservationSessionStatuses
+            ORDER BY slot.startAt ASC
             """)
-    List<Long> findTaskIdsWithActiveCommitments(
+    List<PlannedSlot> findHardReservations(
             @Param("user") User user,
-            @Param("removedStatus") PlannedSlotStatus removedStatus,
-            @Param("cancelledStatus") PlanningSessionStatus cancelledStatus
+            @Param("acceptedStatus") PlannedSlotStatus acceptedStatus,
+            @Param("reservationSessionStatuses") Collection<PlanningSessionStatus> reservationSessionStatuses
     );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)

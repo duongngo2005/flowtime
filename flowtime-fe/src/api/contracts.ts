@@ -10,6 +10,7 @@ export interface TaskPayload {
   preferredStartTime: string | null;
   preferredEndTime: string | null;
   minSessionDuration: number | null;
+  maxDailyMinutes: number | null;
   splitAllowed: boolean;
   category: string | null;
 }

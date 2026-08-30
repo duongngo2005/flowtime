@@ -18,6 +18,7 @@ public record TaskRequest(
         LocalTime preferredStartTime,
         LocalTime preferredEndTime,
         @Positive Integer minSessionDuration,
+        @Positive Integer maxDailyMinutes,
         Boolean splitAllowed,
         @Size(max = 100) String category
 ) {}

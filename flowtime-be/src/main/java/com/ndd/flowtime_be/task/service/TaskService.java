@@ -80,6 +80,7 @@ public class TaskService {
         task.setPreferredStartTime(request.preferredStartTime());
         task.setPreferredEndTime(request.preferredEndTime());
         task.setMinSessionDuration(request.minSessionDuration());
+        task.setMaxDailyMinutes(request.maxDailyMinutes());
         task.setSplitAllowed(Boolean.TRUE.equals(request.splitAllowed()));
         task.setCategory(request.category());
     }

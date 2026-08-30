@@ -32,6 +32,12 @@ public class PlanningService {
 
     @Transactional
     public PlanningSessionResponse createDraft(User user, SchedulingPreviewRequest request) {
+        return planningSessionRepository.findFirstByUserAndStatusOrderByCreatedAtDesc(user, PlanningSessionStatus.DRAFT)
+                .map(session -> get(user, session.getId()))
+                .orElseGet(() -> createNewDraft(user, request));
+    }
+
+    private PlanningSessionResponse createNewDraft(User user, SchedulingPreviewRequest request) {
         SchedulingPreviewResponse preview = schedulingEngine.preview(user, request);
         PlanningSession session = PlanningSession.builder()
                 .user(user)

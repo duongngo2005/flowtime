@@ -13,6 +13,7 @@ interface TaskForm {
   preferredStartTime: string;
   preferredEndTime: string;
   minSessionDuration: string;
+  maxDailyMinutes: string;
   splitAllowed: boolean;
   category: string;
 }
@@ -26,6 +27,7 @@ const emptyForm = (): TaskForm => ({
   preferredStartTime: "",
   preferredEndTime: "",
   minSessionDuration: "",
+  maxDailyMinutes: "",
   splitAllowed: false,
   category: "",
 });
@@ -46,12 +48,20 @@ const formForTask = (task: Task): TaskForm => ({
   preferredStartTime: task.preferredStartTime?.slice(0, 5) || "",
   preferredEndTime: task.preferredEndTime?.slice(0, 5) || "",
   minSessionDuration: task.minSessionDuration ? String(task.minSessionDuration) : "",
+  maxDailyMinutes: task.maxDailyMinutes ? String(task.maxDailyMinutes) : "",
   splitAllowed: task.splitAllowed,
   category: task.category || "",
 });
 
 const formatDateTime = (value: string | null): string =>
-  value ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "No deadline";
+  value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Không có hạn chót";
+
+const priorityLabel: Record<TaskPriority, string> = {
+  LOW: "Thấp",
+  MEDIUM: "Trung bình",
+  HIGH: "Cao",
+  URGENT: "Khẩn cấp",
+};
 
 const TasksPage = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -102,6 +112,7 @@ const TasksPage = () => {
       preferredStartTime: form.preferredStartTime || null,
       preferredEndTime: form.preferredEndTime || null,
       minSessionDuration: form.minSessionDuration ? Number(form.minSessionDuration) : null,
+      maxDailyMinutes: form.maxDailyMinutes ? Number(form.maxDailyMinutes) : null,
       splitAllowed: form.splitAllowed,
       category: form.category.trim() || null,
     };
@@ -152,9 +163,9 @@ const TasksPage = () => {
     <section className={styles.page}>
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Task backlog</p>
-          <h1 className={styles.title}>Plan the work that matters.</h1>
-          <p className={styles.subtitle}>Create tasks first; FlowTime will schedule only incomplete, uncommitted work.</p>
+          <p className={styles.eyebrow}>Danh sách nhiệm vụ</p>
+          <h1 className={styles.title}>Lên kế hoạch cho công việc quan trọng.</h1>
+          <p className={styles.subtitle}>Hãy tạo nhiệm vụ trước; FlowTime chỉ lập lịch cho việc chưa hoàn thành và chưa được cam kết.</p>
         </div>
       </div>
 
@@ -163,72 +174,76 @@ const TasksPage = () => {
 
       <div className={styles.twoColumn}>
         <form className={styles.panel} onSubmit={submitTask}>
-          <h2 className={styles.panelTitle}>{editingTaskId ? "Edit task" : "Create task"}</h2>
-          <p className={styles.panelHint}>Keep duration realistic. Deadline and preferred hours guide the scheduler.</p>
+          <h2 className={styles.panelTitle}>{editingTaskId ? "Chỉnh sửa nhiệm vụ" : "Tạo nhiệm vụ"}</h2>
+          <p className={styles.panelHint}>Hãy nhập thời lượng thực tế. Hạn chót và khung giờ ưu tiên sẽ hướng dẫn bộ lập lịch.</p>
 
           <div className={styles.formGrid}>
             <label className={`${styles.field} ${styles.fullWidth}`}>
-              Title
+              Tiêu đề
               <input className={styles.input} maxLength={255} onChange={(event) => setForm({ ...form, title: event.target.value })} required value={form.title} />
             </label>
             <label className={`${styles.field} ${styles.fullWidth}`}>
-              Description <span aria-hidden="true">(optional)</span>
+              Mô tả <span aria-hidden="true">(tùy chọn)</span>
               <textarea className={styles.textarea} maxLength={10_000} onChange={(event) => setForm({ ...form, description: event.target.value })} value={form.description} />
             </label>
             <label className={styles.field}>
-              Duration (minutes)
+              Thời lượng (phút)
               <input className={styles.input} min="1" onChange={(event) => setForm({ ...form, estimatedDuration: event.target.value })} required type="number" value={form.estimatedDuration} />
             </label>
             <label className={styles.field}>
-              Priority
+              Ưu tiên
               <select className={styles.select} onChange={(event) => setForm({ ...form, priority: event.target.value as TaskPriority })} value={form.priority}>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
+                <option value="LOW">Thấp</option>
+                <option value="MEDIUM">Trung bình</option>
+                <option value="HIGH">Cao</option>
+                <option value="URGENT">Khẩn cấp</option>
               </select>
             </label>
             <label className={`${styles.field} ${styles.fullWidth}`}>
-              Deadline <span aria-hidden="true">(optional)</span>
+              Hạn chót <span aria-hidden="true">(tùy chọn)</span>
               <input className={styles.input} onChange={(event) => setForm({ ...form, deadline: event.target.value })} type="datetime-local" value={form.deadline} />
             </label>
             <label className={styles.field}>
-              Prefer from <span aria-hidden="true">(optional)</span>
+              Ưu tiên từ <span aria-hidden="true">(tùy chọn)</span>
               <input className={styles.input} onChange={(event) => setForm({ ...form, preferredStartTime: event.target.value })} type="time" value={form.preferredStartTime} />
             </label>
             <label className={styles.field}>
-              Prefer until <span aria-hidden="true">(optional)</span>
+              Ưu tiên đến <span aria-hidden="true">(tùy chọn)</span>
               <input className={styles.input} onChange={(event) => setForm({ ...form, preferredEndTime: event.target.value })} type="time" value={form.preferredEndTime} />
             </label>
             <label className={styles.field}>
-              Minimum session <span aria-hidden="true">(optional)</span>
+              Thời lượng phiên tối thiểu <span aria-hidden="true">(tùy chọn)</span>
               <input className={styles.input} min="1" onChange={(event) => setForm({ ...form, minSessionDuration: event.target.value })} type="number" value={form.minSessionDuration} />
             </label>
             <label className={styles.field}>
-              Category <span aria-hidden="true">(optional)</span>
+              Giới hạn mỗi ngày <span aria-hidden="true">(phút, tùy chọn)</span>
+              <input className={styles.input} min="1" onChange={(event) => setForm({ ...form, maxDailyMinutes: event.target.value })} type="number" value={form.maxDailyMinutes} />
+            </label>
+            <label className={styles.field}>
+              Danh mục <span aria-hidden="true">(tùy chọn)</span>
               <input className={styles.input} maxLength={100} onChange={(event) => setForm({ ...form, category: event.target.value })} value={form.category} />
             </label>
             <label className={`${styles.checkboxLabel} ${styles.fullWidth}`}>
               <input checked={form.splitAllowed} onChange={(event) => setForm({ ...form, splitAllowed: event.target.checked })} type="checkbox" />
-              Allow FlowTime to split this task across sessions
+              Cho phép FlowTime chia nhiệm vụ này thành nhiều phiên làm việc
             </label>
           </div>
 
           <div className={styles.actions}>
             <button className={styles.primaryButton} disabled={saving} type="submit">
-              {saving ? "Saving…" : editingTaskId ? "Save changes" : "Create task"}
+              {saving ? "Đang lưu…" : editingTaskId ? "Lưu thay đổi" : "Tạo nhiệm vụ"}
             </button>
-            {editingTaskId && <button className={styles.secondaryButton} onClick={resetForm} type="button">Cancel edit</button>}
+            {editingTaskId && <button className={styles.secondaryButton} onClick={resetForm} type="button">Hủy chỉnh sửa</button>}
           </div>
         </form>
 
         <div className={styles.panel}>
-          <h2 className={styles.panelTitle}>Your tasks</h2>
-          <p className={styles.panelHint}>Completed tasks are retained for history and excluded from new plans.</p>
+          <h2 className={styles.panelTitle}>Nhiệm vụ của bạn</h2>
+          <p className={styles.panelHint}>Nhiệm vụ đã hoàn thành được giữ lại cho lịch sử và loại khỏi các kế hoạch mới.</p>
           {loading ? (
-            <p className={styles.empty}>Loading tasks…</p>
+            <p className={styles.empty}>Đang tải nhiệm vụ…</p>
           ) : tasks.length === 0 ? (
-            <p className={styles.empty}>No tasks yet. Create one to start planning.</p>
+            <p className={styles.empty}>Chưa có nhiệm vụ nào. Hãy tạo một nhiệm vụ để bắt đầu lập kế hoạch.</p>
           ) : (
             <div className={styles.taskList}>
               {tasks.map((task) => (
