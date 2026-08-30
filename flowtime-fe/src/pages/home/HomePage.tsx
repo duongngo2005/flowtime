@@ -76,7 +76,7 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className={styles.heroDaylineWrapper}>
-            <Dayline />
+            <Dayline workdayEndTime="21:00" workdayStartTime="09:00" />
           </div>
         </section>
 

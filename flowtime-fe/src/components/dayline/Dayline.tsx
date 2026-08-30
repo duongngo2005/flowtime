@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+  formatMinutes,
+  minutesFromTime,
+  vietnamDateAtMinutes,
+  vietnamDateTime,
+} from "../../lib/vietnamTime";
 import styles from "./Dayline.module.css";
 
-const START_HOUR = 9;
-const END_HOUR = 21;
-const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
+const DEFAULT_START_TIME = "09:00";
+const DEFAULT_END_TIME = "17:00";
 
 export interface DaylineEvent {
   id: number;
@@ -15,6 +20,8 @@ export interface DaylineEvent {
 
 interface DaylineProps {
   events?: DaylineEvent[];
+  workdayStartTime?: string;
+  workdayEndTime?: string;
 }
 
 const DEMO_BLOCKS = [
@@ -25,48 +32,66 @@ const DEMO_BLOCKS = [
   { id: "5", start: 600, dur: 90, label: "LÀM VIỆC SÂU", type: "busy" },
 ];
 
-export const Dayline: React.FC<DaylineProps> = ({ events }) => {
+export const Dayline: React.FC<DaylineProps> = ({
+  events,
+  workdayStartTime = DEFAULT_START_TIME,
+  workdayEndTime = DEFAULT_END_TIME,
+}) => {
   const [currentTimeStr, setCurrentTimeStr] = useState("");
   const [markerPercent, setMarkerPercent] = useState<number | null>(null);
   const [outsideTimeline, setOutsideTimeline] = useState<"before" | "after" | null>(null);
 
+  const { startMinutes, endMinutes, totalMinutes } = useMemo(() => {
+    const defaultStart = minutesFromTime(DEFAULT_START_TIME)!;
+    const defaultEnd = minutesFromTime(DEFAULT_END_TIME)!;
+    const parsedStart = minutesFromTime(workdayStartTime) ?? defaultStart;
+    const parsedEnd = minutesFromTime(workdayEndTime) ?? defaultEnd;
+
+    if (parsedEnd <= parsedStart) {
+      return { startMinutes: defaultStart, endMinutes: defaultEnd, totalMinutes: defaultEnd - defaultStart };
+    }
+
+    return { startMinutes: parsedStart, endMinutes: parsedEnd, totalMinutes: parsedEnd - parsedStart };
+  }, [workdayEndTime, workdayStartTime]);
+
+  const ticks = useMemo(
+    () => Array.from({ length: 5 }, (_, index) => formatMinutes(startMinutes + ((endMinutes - startMinutes) * index) / 4)),
+    [endMinutes, startMinutes],
+  );
+
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      const h = now.getHours();
-      const m = now.getMinutes();
-      setCurrentTimeStr(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+      const now = vietnamDateTime();
+      const nowMinutes = now.hour * 60 + now.minute;
+      setCurrentTimeStr(formatMinutes(nowMinutes));
 
-      const mins = (h - START_HOUR) * 60 + m;
-      if (mins < 0) {
+      const elapsedMinutes = nowMinutes - startMinutes;
+      if (elapsedMinutes < 0) {
         setMarkerPercent(null);
         setOutsideTimeline("before");
         return;
       }
-      if (mins >= TOTAL_MINUTES) {
+      if (elapsedMinutes >= totalMinutes) {
         setMarkerPercent(null);
         setOutsideTimeline("after");
         return;
       }
 
-      setMarkerPercent((mins / TOTAL_MINUTES) * 100);
+      setMarkerPercent((elapsedMinutes / totalMinutes) * 100);
       setOutsideTimeline(null);
     };
 
     updateTime();
     const interval = setInterval(updateTime, 1000 * 60);
     return () => clearInterval(interval);
-  }, []);
+  }, [startMinutes, totalMinutes]);
 
   const blocks = useMemo(() => {
     if (events === undefined) return DEMO_BLOCKS;
 
-    const dayStart = new Date();
-    dayStart.setHours(0, 0, 0, 0);
-    const workingStart = new Date(dayStart);
-    workingStart.setHours(START_HOUR, 0, 0, 0);
-    const workingEnd = new Date(dayStart);
-    workingEnd.setHours(END_HOUR, 0, 0, 0);
+    const { date } = vietnamDateTime();
+    const workingStart = vietnamDateAtMinutes(date, startMinutes);
+    const workingEnd = vietnamDateAtMinutes(date, endMinutes);
 
     return events.flatMap((event) => {
       const eventStart = new Date(event.startAt);
@@ -78,20 +103,20 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
 
       return [{
         id: String(event.id),
-        start: (visibleStart.getTime() - workingStart.getTime()) / 60000,
-        dur: (visibleEnd.getTime() - visibleStart.getTime()) / 60000,
+        start: (visibleStart.getTime() - workingStart.getTime()) / 60_000,
+        dur: (visibleEnd.getTime() - visibleStart.getTime()) / 60_000,
         label: event.allDay ? `${event.title} · CẢ NGÀY` : event.title,
         type: "busy",
       }];
     });
-  }, [events]);
+  }, [endMinutes, events, startMinutes]);
 
   return (
     <div className={styles.daylineWrapper} aria-label="Dòng thời gian trong ngày">
       <div className={styles.ticksRow} aria-hidden="true">
-        {["09:00", "12:00", "15:00", "18:00", "21:00"].map((t) => (
-          <div key={t} className={styles.tickItem}>
-            <span className={styles.tickLabel}>{t}</span>
+        {ticks.map((tick) => (
+          <div key={tick} className={styles.tickItem}>
+            <span className={styles.tickLabel}>{tick}</span>
             <div className={styles.tickMark} />
           </div>
         ))}
@@ -104,18 +129,18 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
       )}
 
       <div className={styles.track}>
-        {blocks.map((b) => {
-          const left = (b.start / TOTAL_MINUTES) * 100;
-          const width = (b.dur / TOTAL_MINUTES) * 100;
-          const isBusy = b.type === "busy";
+        {blocks.map((block) => {
+          const left = (block.start / totalMinutes) * 100;
+          const width = (block.dur / totalMinutes) * 100;
+          const isBusy = block.type === "busy";
 
           return (
             <div
-              key={b.id}
+              key={block.id}
               className={`${styles.eventBlock} ${isBusy ? styles.busyBlock : styles.openBlock}`}
               style={{ left: `${left}%`, width: `${width}%` }}
             >
-              <span className={styles.blockText}>{b.label}</span>
+              <span className={styles.blockText}>{block.label}</span>
             </div>
           );
         })}
