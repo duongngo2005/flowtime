@@ -26,8 +26,9 @@ const DEMO_BLOCKS = [
 ];
 
 export const Dayline: React.FC<DaylineProps> = ({ events }) => {
-  const [currentTimeStr, setCurrentTimeStr] = useState("18:42");
-  const [markerPercent, setMarkerPercent] = useState<number>(80.8);
+  const [currentTimeStr, setCurrentTimeStr] = useState("");
+  const [markerPercent, setMarkerPercent] = useState<number | null>(null);
+  const [outsideTimeline, setOutsideTimeline] = useState<"before" | "after" | null>(null);
 
   useEffect(() => {
     const updateTime = () => {
@@ -37,9 +38,19 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
       setCurrentTimeStr(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
 
       const mins = (h - START_HOUR) * 60 + m;
-      const clamped = Math.max(0, Math.min(TOTAL_MINUTES, mins));
-      const pct = (clamped / TOTAL_MINUTES) * 100;
-      setMarkerPercent(pct > 0 && pct < 100 ? pct : 80.8);
+      if (mins < 0) {
+        setMarkerPercent(null);
+        setOutsideTimeline("before");
+        return;
+      }
+      if (mins >= TOTAL_MINUTES) {
+        setMarkerPercent(null);
+        setOutsideTimeline("after");
+        return;
+      }
+
+      setMarkerPercent((mins / TOTAL_MINUTES) * 100);
+      setOutsideTimeline(null);
     };
 
     updateTime();
@@ -86,6 +97,12 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
         ))}
       </div>
 
+      {markerPercent === null && currentTimeStr && outsideTimeline && (
+        <p className={styles.outsideNow} role="status">
+          NOW {currentTimeStr}
+        </p>
+      )}
+
       <div className={styles.track}>
         {blocks.map((b) => {
           const left = (b.start / TOTAL_MINUTES) * 100;
@@ -107,18 +124,20 @@ export const Dayline: React.FC<DaylineProps> = ({ events }) => {
           <span className={styles.emptyState}>NO LOCAL EVENTS TODAY</span>
         )}
 
-        <div
-          className={styles.copperMarker}
-          style={{ left: `${markerPercent}%` }}
-          role="status"
-          aria-label={`Current time indicator: ${currentTimeStr} Now`}
-        >
-          <div className={styles.copperLine} />
-          <div className={styles.copperTag}>
-            <span className={styles.copperPip}>▲</span>
-            <span className={styles.copperText}>NOW {currentTimeStr}</span>
+        {markerPercent !== null && (
+          <div
+            className={styles.copperMarker}
+            style={{ left: `${markerPercent}%` }}
+            role="status"
+            aria-label={`Current time indicator: ${currentTimeStr} Now`}
+          >
+            <div className={styles.copperLine} />
+            <div className={styles.copperTag}>
+              <span className={styles.copperPip}>▲</span>
+              <span className={styles.copperText}>NOW {currentTimeStr}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
