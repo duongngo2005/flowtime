@@ -5,7 +5,6 @@ import com.ndd.flowtime_be.preference.dto.SchedulingPreferenceResponse;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.user.entity.User;
-import com.ndd.flowtime_be.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,9 +31,6 @@ class SchedulingPreferenceServiceTest {
     @Mock
     private SchedulingPreferenceRepository preferenceRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
     @InjectMocks
     private SchedulingPreferenceService preferenceService;
 
@@ -52,15 +48,14 @@ class SchedulingPreferenceServiceTest {
         SchedulingPreferenceResponse response = preferenceService.get(user);
 
         assertFalse(response.configured());
-        assertEquals("Asia/Ho_Chi_Minh", response.timezone());
         assertEquals(LocalTime.of(9, 0), response.workdayStartTime());
         assertEquals(EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY), response.workingDays());
         assertEquals(480, response.dailyFocusLimit());
     }
 
     @Test
-    void storesSchedulingPreferencesAndUpdatesUserTimezone() {
-        SchedulingPreferenceRequest request = request("America/New_York", LocalTime.of(8, 30), LocalTime.of(17, 30));
+    void storesSchedulingPreferencesInVietnamTime() {
+        SchedulingPreferenceRequest request = request(LocalTime.of(8, 30), LocalTime.of(17, 30));
         when(preferenceRepository.findByUser(user)).thenReturn(Optional.empty());
         when(preferenceRepository.save(any(SchedulingPreference.class))).thenAnswer(invocation -> {
             SchedulingPreference preference = invocation.getArgument(0);
@@ -72,8 +67,7 @@ class SchedulingPreferenceServiceTest {
 
         ArgumentCaptor<SchedulingPreference> captor = ArgumentCaptor.forClass(SchedulingPreference.class);
         verify(preferenceRepository).save(captor.capture());
-        verify(userRepository).save(user);
-        assertEquals("America/New_York", user.getTimezone());
+        assertEquals("Asia/Ho_Chi_Minh", user.getTimezone());
         assertEquals(LocalTime.of(8, 30), captor.getValue().getWorkdayStartTime());
         assertEquals(EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY), response.workingDays());
         assertEquals(300, response.dailyFocusLimit());
@@ -81,27 +75,19 @@ class SchedulingPreferenceServiceTest {
     }
 
     @Test
-    void rejectsInvalidTimezoneAndWorkdayRange() {
-        SchedulingPreferenceRequest invalidTimezone = request("Mars/Olympus_Mons", LocalTime.of(9, 0), LocalTime.of(17, 0));
-        SchedulingPreferenceRequest invalidRange = request("UTC", LocalTime.of(17, 0), LocalTime.of(9, 0));
+    void rejectsAnInvalidWorkdayRange() {
+        SchedulingPreferenceRequest invalidRange = request(LocalTime.of(17, 0), LocalTime.of(9, 0));
 
-        ResponseStatusException timezoneException = assertThrows(
-                ResponseStatusException.class,
-                () -> preferenceService.update(user, invalidTimezone)
-        );
         ResponseStatusException rangeException = assertThrows(
                 ResponseStatusException.class,
                 () -> preferenceService.update(user, invalidRange)
         );
 
-        assertEquals(HttpStatus.BAD_REQUEST, timezoneException.getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST, rangeException.getStatusCode());
-        verifyNoInteractions(userRepository);
     }
 
-    private SchedulingPreferenceRequest request(String timezone, LocalTime start, LocalTime end) {
+    private SchedulingPreferenceRequest request(LocalTime start, LocalTime end) {
         return new SchedulingPreferenceRequest(
-                timezone,
                 start,
                 end,
                 EnumSet.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),

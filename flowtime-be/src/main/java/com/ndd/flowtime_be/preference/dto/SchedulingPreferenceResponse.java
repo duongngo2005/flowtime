@@ -8,7 +8,6 @@ import java.time.LocalTime;
 import java.util.Set;
 
 public record SchedulingPreferenceResponse(
-        String timezone,
         LocalTime workdayStartTime,
         LocalTime workdayEndTime,
         Set<DayOfWeek> workingDays,
@@ -19,7 +18,6 @@ public record SchedulingPreferenceResponse(
 ) {
     public static SchedulingPreferenceResponse from(User user, SchedulingPreference preference) {
         return new SchedulingPreferenceResponse(
-                user.getTimezone(),
                 preference.getWorkdayStartTime(),
                 preference.getWorkdayEndTime(),
                 Set.copyOf(preference.getWorkingDays()),

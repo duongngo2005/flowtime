@@ -5,6 +5,7 @@ import { getErrorMessage } from "../../api/errors";
 import styles from "../workspace/WorkspacePage.module.css";
 
 const activePlanStorageKey = "active_planning_id";
+const vietnamTimezone = "Asia/Ho_Chi_Minh";
 
 const localDate = (): string => {
   const date = new Date();
@@ -14,7 +15,7 @@ const localDate = (): string => {
 };
 
 const formatSlotTime = (value: string): string =>
-  new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short", timeZone: vietnamTimezone }).format(new Date(value));
 
 const unscheduledMessage = (reason: string): string => {
   const messages: Record<string, string> = {

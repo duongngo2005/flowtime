@@ -14,10 +14,7 @@ const week: Array<{ value: WorkingDay; label: string }> = [
   { value: "SUNDAY", label: "Chủ Nhật" },
 ];
 
-const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-
 const defaults = (): SchedulingPreferencesPayload => ({
-  timezone: browserTimezone,
   workdayStartTime: "09:00",
   workdayEndTime: "17:00",
   workingDays: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"],
@@ -27,7 +24,6 @@ const defaults = (): SchedulingPreferencesPayload => ({
 });
 
 const formForPreferences = (preference: SchedulingPreferences): SchedulingPreferencesPayload => ({
-  timezone: preference.timezone,
   workdayStartTime: preference.workdayStartTime.slice(0, 5),
   workdayEndTime: preference.workdayEndTime.slice(0, 5),
   workingDays: preference.workingDays,
@@ -107,17 +103,14 @@ const PreferencesPage = () => {
 
       <form className={styles.panel} onSubmit={savePreferences}>
         <h2 className={styles.panelTitle}>Lịch làm việc {configured ? "" : "(chưa được thiết lập)"}</h2>
-        <p className={styles.panelHint}>Dùng múi giờ IANA, ví dụ <code>Asia/Ho_Chi_Minh</code>. Cần chọn ít nhất một ngày làm việc.</p>
+        <p className={styles.panelHint}>FlowTime dùng cố định giờ Việt Nam (<code>Asia/Ho_Chi_Minh</code>). Cần chọn ít nhất một ngày làm việc.</p>
+        <p className={styles.panelHint}>Ngày lễ được đồng bộ để bạn nhìn thấy, nhưng không tự khóa lịch. Nếu bạn nghỉ, hãy tạo sự kiện cả ngày “Nghỉ lễ” hoặc “Đi chơi” trên Google Calendar rồi đồng bộ lại.</p>
 
         {loading ? (
           <p className={styles.empty}>Đang tải thiết lập…</p>
         ) : (
           <>
             <div className={styles.formGrid}>
-              <label className={`${styles.field} ${styles.fullWidth}`}>
-                Múi giờ
-                <input className={styles.input} onChange={(event) => setForm({ ...form, timezone: event.target.value })} required value={form.timezone} />
-              </label>
               <label className={styles.field}>
                 Bắt đầu ngày làm việc
                 <input className={styles.input} onChange={(event) => setForm({ ...form, workdayStartTime: event.target.value })} required type="time" value={form.workdayStartTime} />

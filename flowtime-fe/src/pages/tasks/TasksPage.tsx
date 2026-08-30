@@ -54,7 +54,7 @@ const formForTask = (task: Task): TaskForm => ({
 });
 
 const formatDateTime = (value: string | null): string =>
-  value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Không có hạn chót";
+  value ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(value)) : "Không có hạn chót";
 
 const priorityLabel: Record<TaskPriority, string> = {
   LOW: "Thấp",

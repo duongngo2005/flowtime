@@ -5,23 +5,18 @@ import com.ndd.flowtime_be.preference.dto.SchedulingPreferenceResponse;
 import com.ndd.flowtime_be.preference.entity.SchedulingPreference;
 import com.ndd.flowtime_be.preference.repository.SchedulingPreferenceRepository;
 import com.ndd.flowtime_be.user.entity.User;
-import com.ndd.flowtime_be.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.ZoneId;
-import java.time.zone.ZoneRulesException;
 
 @Service
 @RequiredArgsConstructor
 public class SchedulingPreferenceService {
 
     private final SchedulingPreferenceRepository preferenceRepository;
-    private final UserRepository userRepository;
-
     @Transactional(readOnly = true)
     public SchedulingPreferenceResponse get(User user) {
         SchedulingPreference preference = preferenceRepository.findByUser(user)
@@ -32,9 +27,6 @@ public class SchedulingPreferenceService {
     @Transactional
     public SchedulingPreferenceResponse update(User user, SchedulingPreferenceRequest request) {
         validate(request);
-        user.setTimezone(request.timezone().trim());
-        userRepository.save(user);
-
         SchedulingPreference preference = preferenceRepository.findByUser(user)
                 .orElseGet(() -> SchedulingPreference.builder().user(user).build());
         preference.setWorkdayStartTime(request.workdayStartTime());
@@ -48,12 +40,6 @@ public class SchedulingPreferenceService {
     }
 
     private void validate(SchedulingPreferenceRequest request) {
-        try {
-            ZoneId.of(request.timezone().trim());
-        } catch (ZoneRulesException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Múi giờ phải là một múi giờ IANA hợp lệ.");
-        }
-
         if (!request.workdayStartTime().isBefore(request.workdayEndTime())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

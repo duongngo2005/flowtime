@@ -28,7 +28,7 @@ public class User implements UserDetails {
     private String name;
     @Column(nullable = false, length = 100)
     @Builder.Default
-    private String timezone = "UTC";
+    private String timezone = "Asia/Ho_Chi_Minh";
 
     private Instant createdAt;
     private Instant updatedAt;
