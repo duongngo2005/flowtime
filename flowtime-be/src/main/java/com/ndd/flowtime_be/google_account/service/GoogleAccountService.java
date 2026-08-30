@@ -83,7 +83,7 @@ public class GoogleAccountService {
         GoogleAccount account = googleAccountRepository.findByUser(user)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "Google account is not connected."
+                        "Tài khoản Google chưa được kết nối."
                 ));
 
         if (!account.isAccessTokenExpired()) {
@@ -93,7 +93,7 @@ public class GoogleAccountService {
         if (account.getRefreshToken() == null) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
-                    "Google account needs to be reconnected."
+                    "Tài khoản Google cần được kết nối lại."
             );
         }
 

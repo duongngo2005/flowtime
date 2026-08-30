@@ -78,7 +78,7 @@ const TasksPage = () => {
       const response = await api.get<Task[]>("/api/v1/tasks");
       setTasks(response.data);
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not load your tasks."));
+      setError(getErrorMessage(requestError, "Không thể tải danh sách nhiệm vụ."));
     } finally {
       setLoading(false);
     }
@@ -120,15 +120,15 @@ const TasksPage = () => {
     try {
       if (editingTaskId) {
         await api.put(`/api/v1/tasks/${editingTaskId}`, payload);
-        setNotice("Task updated.");
+        setNotice("Đã cập nhật nhiệm vụ.");
       } else {
         await api.post("/api/v1/tasks", payload);
-        setNotice("Task created.");
+        setNotice("Đã tạo nhiệm vụ.");
       }
       resetForm();
       await loadTasks();
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not save this task."));
+      setError(getErrorMessage(requestError, "Không thể lưu nhiệm vụ này."));
     } finally {
       setSaving(false);
     }
@@ -138,24 +138,24 @@ const TasksPage = () => {
     try {
       setError(null);
       await api.patch(`/api/v1/tasks/${taskId}/complete`);
-      setNotice("Task marked as complete.");
+      setNotice("Đã đánh dấu nhiệm vụ hoàn thành.");
       await loadTasks();
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not complete this task."));
+      setError(getErrorMessage(requestError, "Không thể hoàn thành nhiệm vụ này."));
     }
   };
 
   const deleteTask = async (taskId: number) => {
-    if (!window.confirm("Delete this task? This cannot be undone.")) return;
+    if (!window.confirm("Xóa nhiệm vụ này? Thao tác này không thể hoàn tác.")) return;
 
     try {
       setError(null);
       await api.delete(`/api/v1/tasks/${taskId}`);
-      setNotice("Task deleted.");
+      setNotice("Đã xóa nhiệm vụ.");
       if (editingTaskId === taskId) resetForm();
       await loadTasks();
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not delete this task."));
+      setError(getErrorMessage(requestError, "Không thể xóa nhiệm vụ này."));
     }
   };
 
@@ -252,16 +252,17 @@ const TasksPage = () => {
                     <h3 className={task.status === "COMPLETED" ? styles.completed : undefined}>{task.title}</h3>
                     {task.description && <p className={styles.taskDescription}>{task.description}</p>}
                     <div className={styles.taskMeta}>
-                      <span>{task.estimatedDuration} min</span>
-                      <span>{task.priority}</span>
+                      <span>{task.estimatedDuration} phút</span>
+                      <span>{priorityLabel[task.priority]}</span>
                       <span>{formatDateTime(task.deadline)}</span>
+                      {task.maxDailyMinutes && <span>Tối đa {task.maxDailyMinutes} phút/ngày</span>}
                       {task.category && <span>{task.category}</span>}
                     </div>
                   </div>
                   <div className={styles.taskActions}>
-                    {task.status !== "COMPLETED" && <button className={styles.textButton} onClick={() => void completeTask(task.id)} type="button">Complete</button>}
-                    <button className={styles.textButton} onClick={() => { setEditingTaskId(task.id); setForm(formForTask(task)); setNotice(null); }} type="button">Edit</button>
-                    <button className={`${styles.textButton} ${styles.textButtonDanger}`} onClick={() => void deleteTask(task.id)} type="button">Delete</button>
+                    {task.status !== "COMPLETED" && <button className={styles.textButton} onClick={() => void completeTask(task.id)} type="button">Hoàn thành</button>}
+                    <button className={styles.textButton} onClick={() => { setEditingTaskId(task.id); setForm(formForTask(task)); setNotice(null); }} type="button">Chỉnh sửa</button>
+                    <button className={`${styles.textButton} ${styles.textButtonDanger}`} onClick={() => void deleteTask(task.id)} type="button">Xóa</button>
                   </div>
                 </article>
               ))}

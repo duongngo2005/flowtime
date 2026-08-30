@@ -60,7 +60,7 @@ export const DashboardPage = () => {
         navigate("/", { replace: true });
         return;
       }
-      setError(getErrorMessage(requestError, "Could not load your dashboard."));
+      setError(getErrorMessage(requestError, "Không thể tải không gian làm việc."));
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export const DashboardPage = () => {
 
   const syncCalendar = async () => {
     if (!googleConnected) {
-      setError("Connect Google Calendar before syncing.");
+      setError("Hãy kết nối Google Calendar trước khi đồng bộ.");
       return;
     }
 
@@ -85,30 +85,30 @@ export const DashboardPage = () => {
       setError(null);
       setNotice(null);
       const response = await api.post<CalendarSyncResponse>("/api/v1/calendars/sync");
-      setNotice(`Synced ${response.data.calendarsSynced} calendars: ${response.data.eventsCreated} new and ${response.data.eventsUpdated} updated events.`);
+      setNotice(`Đã đồng bộ ${response.data.calendarsSynced} lịch: ${response.data.eventsCreated} sự kiện mới và ${response.data.eventsUpdated} sự kiện được cập nhật.`);
       await loadDashboard();
     } catch (requestError) {
-      setError(getErrorMessage(requestError, "Could not sync Google Calendar."));
+      setError(getErrorMessage(requestError, "Không thể đồng bộ Google Calendar."));
     } finally {
       setSyncing(false);
     }
   };
 
   if (loading) {
-    return <p className={styles.loading}>Loading your workspace…</p>;
+    return <p className={styles.loading}>Đang tải không gian làm việc…</p>;
   }
 
   return (
     <section className={styles.page}>
       <div className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>Today’s workspace</p>
-          <h1 className={styles.welcomeTitle}>Welcome back{user ? `, ${user.name}` : ""}.</h1>
-          <p className={styles.subtitle}>Sync your calendar, shape your task backlog, then generate a plan you can review.</p>
+          <p className={styles.eyebrow}>Không gian làm việc hôm nay</p>
+          <h1 className={styles.welcomeTitle}>Chào mừng trở lại{user ? `, ${user.name}` : ""}.</h1>
+          <p className={styles.subtitle}>Đồng bộ lịch, chuẩn bị danh sách nhiệm vụ, rồi tạo kế hoạch để xem xét.</p>
         </div>
         <div className={`${styles.connection} ${googleConnected ? styles.connected : styles.disconnected}`}>
           <span className={styles.connectionDot} />
-          {googleConnected ? "Google Calendar connected" : "Google Calendar not connected"}
+          {googleConnected ? "Đã kết nối Google Calendar" : "Chưa kết nối Google Calendar"}
         </div>
       </div>
 
@@ -119,34 +119,34 @@ export const DashboardPage = () => {
         <article className={`${styles.card} ${styles.timelineCard}`}>
           <div className={styles.cardHeader}>
             <div>
-              <p className={styles.cardEyebrow}>Local calendar</p>
-              <h2>Today’s schedule</h2>
+              <p className={styles.cardEyebrow}>Lịch cục bộ</p>
+              <h2>Lịch trình hôm nay</h2>
             </div>
             <button className={styles.syncButton} disabled={syncing || !googleConnected} onClick={() => void syncCalendar()} type="button">
-              {syncing ? "Syncing…" : "Sync calendar"}
+              {syncing ? "Đang đồng bộ…" : "Đồng bộ lịch"}
             </button>
           </div>
           <Dayline events={calendarEvents} />
-          <p className={styles.cardHint}>Scheduling reads these synced events as busy time. Sync again before generating a new plan.</p>
+          <p className={styles.cardHint}></p>
         </article>
 
         <article className={styles.card}>
-          <p className={styles.cardEyebrow}>Start here</p>
-          <h2>Prepare a reliable plan</h2>
+          <p className={styles.cardEyebrow}>Bắt đầu từ đây</p>
+          <h2>Chuẩn bị một kế hoạch đáng tin cậy</h2>
           <ol className={styles.checklist}>
-            <li><Link to="/tasks">Create or update tasks</Link></li>
-            <li><Link to="/preferences">Set your focus schedule</Link></li>
-            <li><Link to="/planning">Generate and review a draft</Link></li>
+            <li><Link to="/tasks">Tạo hoặc cập nhật nhiệm vụ</Link></li>
+            <li><Link to="/preferences">Thiết lập lịch tập trung</Link></li>
+            <li><Link to="/planning">Tạo và xem xét bản nháp</Link></li>
           </ol>
-          <p className={styles.cardHint}>FlowTime will not create a Google event until you approve and apply a plan.</p>
+          <p className={styles.cardHint}>FlowTime chỉ tạo sự kiện Google sau khi bạn phê duyệt và áp dụng kế hoạch.</p>
         </article>
 
         <article className={styles.card}>
-          <p className={styles.cardEyebrow}>Account</p>
-          <h2>{user?.email || "Signed in"}</h2>
+          <p className={styles.cardEyebrow}>Tài khoản</p>
+          <h2>{user?.email || "Đã đăng nhập"}</h2>
           <dl className={styles.accountDetails}>
-            <div><dt>Timezone</dt><dd>{user?.timezone || "—"}</dd></div>
-            <div><dt>Events today</dt><dd>{calendarEvents.length}</dd></div>
+            <div><dt>Múi giờ</dt><dd>{user?.timezone || "—"}</dd></div>
+            <div><dt>Sự kiện hôm nay</dt><dd>{calendarEvents.length}</dd></div>
           </dl>
         </article>
       </div>

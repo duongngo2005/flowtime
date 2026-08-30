@@ -79,7 +79,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
           type="button"
           className={styles.closeButton}
           onClick={onClose}
-          aria-label="Close modal"
+          aria-label="Đóng hộp thoại"
         >
           ×
         </button>
@@ -91,14 +91,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
         <div className={styles.headlineBlock}>
           <h2 id="modal-headline" className={styles.headline}>
-            Make time
+            Dành thời gian
             <br />
-            for what
+            cho điều
             <br />
-            matters.
+            quan trọng.
           </h2>
           <p className={styles.description}>
-            Your calendar, tasks, and time organized around your priorities.
+            Lịch, nhiệm vụ và thời gian của bạn được sắp xếp theo ưu tiên.
           </p>
         </div>
 
@@ -137,7 +137,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               <div className={styles.copperLine} />
               <div className={styles.copperTag}>
                 <span className={styles.copperPip}>▲</span>
-                <span className={styles.copperText}>NOW</span>
+                <span className={styles.copperText}>BÂY GIỜ</span>
               </div>
             </div>
           </div>
@@ -149,10 +149,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
             onClick={handleGoogleLogin}
             disabled={isLoading}
             className={styles.googleButton}
-            aria-label="Continue with Google"
+            aria-label="Tiếp tục với Google"
           >
             {isLoading ? (
-              <span className={styles.loadingText}>Connecting your calendar…</span>
+              <span className={styles.loadingText}>Đang kết nối lịch của bạn…</span>
             ) : (
               <>
                 <svg className={styles.googleIcon} viewBox="0 0 24 24" aria-hidden="true">
@@ -173,13 +173,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     fill="#EA4335"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>Tiếp tục với Google</span>
               </>
             )}
           </button>
 
           <p className={styles.privacyNote}>
-            Your calendar stays yours. FlowTime plans around it.
+            Lịch của bạn vẫn thuộc về bạn. FlowTime chỉ lập kế hoạch xung quanh lịch đó.
           </p>
         </div>
       </div>

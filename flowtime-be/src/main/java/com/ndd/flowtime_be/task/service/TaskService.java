@@ -67,7 +67,7 @@ public class TaskService {
 
     private Task findOwnedTask(User user, Long taskId) {
         return taskRepository.findByIdAndUser(taskId, user)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhiệm vụ."));
     }
 
     private void applyRequest(Task task, TaskRequest request) {
@@ -91,7 +91,7 @@ public class TaskService {
                 && !request.preferredStartTime().isBefore(request.preferredEndTime())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "preferredStartTime must be before preferredEndTime."
+                    "Giờ ưu tiên bắt đầu phải trước giờ ưu tiên kết thúc."
             );
         }
     }

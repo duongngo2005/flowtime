@@ -86,7 +86,7 @@ api.interceptors.response.use(
           processQueue(null, newAccessToken);
           return api(originalRequest);
         } else {
-          throw new Error("No access token returned from refresh endpoint");
+          throw new Error("Không nhận được access token mới từ phiên đăng nhập.");
         }
       } catch (refreshError) {
         processQueue(refreshError, null);

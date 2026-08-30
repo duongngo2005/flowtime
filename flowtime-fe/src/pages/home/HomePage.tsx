@@ -27,10 +27,10 @@ export const HomePage: React.FC = () => {
         </a>
         <div className={styles.navRight}>
           <a href="#how-it-works" onClick={scrollToHowItWorks} className={styles.navLink}>
-            How it works
+            Cách hoạt động
           </a>
           <button type="button" onClick={openLogin} className={styles.navSignInBtn}>
-            Sign in
+            Đăng nhập
           </button>
         </div>
       </header>
@@ -38,13 +38,13 @@ export const HomePage: React.FC = () => {
       <div className={styles.container}>
         <section className={styles.hero} aria-labelledby="hero-title">
           <h1 id="hero-title" className={styles.heroThesis}>
-            Your calendar is full.
+            Lịch của bạn có thể bận.
             <br />
-            Your time isn’t.
+            Thời gian vẫn có thể được sắp xếp.
           </h1>
 
           <p className={styles.heroSub}>
-            FlowTime finds the right time for the things you need to do — around your calendar, priorities, and working habits.
+            FlowTime lập kế hoạch cho các nhiệm vụ còn lại dựa trên lịch đã đồng bộ, ưu tiên và thói quen làm việc của bạn.
           </p>
 
           <div className={styles.heroCtas}>
@@ -67,11 +67,11 @@ export const HomePage: React.FC = () => {
                   fill="#EA4335"
                 />
               </svg>
-              <span>Continue with Google</span>
+              <span>Tiếp tục với Google</span>
             </button>
 
             <a href="#how-it-works" onClick={scrollToHowItWorks} className={styles.secondaryLink}>
-              See how it works ↓
+              Xem cách hoạt động ↓
             </a>
           </div>
 
@@ -82,90 +82,90 @@ export const HomePage: React.FC = () => {
 
         <section id="how-it-works" className={styles.section}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionPre}>01 // CONCEPT</span>
+            <span className={styles.sectionPre}>01 // QUY TRÌNH</span>
             <h2 className={styles.sectionTitle}>
-              A calendar shows when you’re busy. FlowTime helps you decide when to work.
+              Lịch cho biết khi nào bạn bận. FlowTime giúp bạn tạo một bản kế hoạch để xem xét.
             </h2>
           </div>
 
           <div className={styles.flowEquation}>
-            <span className={styles.equationTerm}>YOUR CALENDAR</span>
+            <span className={styles.equationTerm}>LỊCH CỦA BẠN</span>
             <span className={styles.equationOperator}>+</span>
-            <span className={styles.equationTerm}>YOUR TASKS</span>
+            <span className={styles.equationTerm}>NHIỆM VỤ CỦA BẠN</span>
             <span className={styles.equationOperator}>+</span>
-            <span className={styles.equationTerm}>YOUR PREFERENCES</span>
+            <span className={styles.equationTerm}>SỞ THÍCH CỦA BẠN</span>
             <span className={styles.equationOperator}>→</span>
-            <span className={styles.equationResult}>FLOWTIME SCHEDULING ENGINE</span>
+            <span className={styles.equationResult}>BỘ LẬP LỊCH FLOWTIME</span>
             <span className={styles.equationOperator}>→</span>
-            <span className={styles.equationResult}>BEST TIME TO WORK</span>
+            <span className={styles.equationResult}>BẢN NHÁP KẾ HOẠCH</span>
           </div>
         </section>
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionPre}>02 // SCHEDULING ENGINE</span>
+            <span className={styles.sectionPre}>02 // LẬP KẾ HOẠCH</span>
             <h2 className={styles.sectionTitle}>
-              Need two hours? FlowTime finds them.
+              Cần thời gian tập trung? Hãy để FlowTime đề xuất các khung giờ phù hợp.
             </h2>
           </div>
 
           <div className={styles.candidateCard}>
             <div className={styles.candidateHeader}>
-              <span className={styles.candidateQuery}>findBestTime: "2 hours for Backend API"</span>
-              <span className={styles.candidateBadge}>RANKED CANDIDATES</span>
+              <span className={styles.candidateQuery}>Tạo bản nháp cho: “2 giờ làm Backend API”</span>
+              <span className={styles.candidateBadge}>KHUNG GIỜ ĐỀ XUẤT</span>
             </div>
 
             <div className={styles.slotList}>
               <div className={`${styles.slotRow} ${styles.slotRowBest}`}>
                 <div className={styles.slotLeft}>
-                  <span>Wed 19:00 — 21:00</span>
-                  <span className={styles.slotTag}>Best match</span>
+                  <span>Thứ Tư 19:00 — 21:00</span>
+                  <span className={styles.slotTag}>Đề xuất</span>
                 </div>
-                <span className={styles.slotScore}>94 pts</span>
+                <span className={styles.slotScore}>xem xét</span>
               </div>
 
               <div className={`${styles.slotRow} ${styles.slotRowNormal}`}>
                 <div className={styles.slotLeft}>
-                  <span>Thu 20:00 — 22:00</span>
+                  <span>Thứ Năm 20:00 — 22:00</span>
                 </div>
-                <span className={styles.slotScore}>87 pts</span>
+                <span className={styles.slotScore}>xem xét</span>
               </div>
 
               <div className={`${styles.slotRow} ${styles.slotRowNormal}`}>
                 <div className={styles.slotLeft}>
-                  <span>Sat 09:00 — 11:00</span>
+                  <span>Thứ Bảy 09:00 — 11:00</span>
                 </div>
-                <span className={styles.slotScore}>81 pts</span>
+                <span className={styles.slotScore}>xem xét</span>
               </div>
             </div>
           </div>
 
           <p className={styles.sectionSub}>
-            FlowTime checks your calendar, working hours, deadlines, and preferences before recommending a time.
+            FlowTime kiểm tra lịch đã đồng bộ, giờ làm việc, hạn chót và sở thích trước khi tạo đề xuất.
           </p>
         </section>
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionPre}>03 // NATURAL LANGUAGE INTERFACE</span>
+            <span className={styles.sectionPre}>03 // BẠN QUYẾT ĐỊNH</span>
             <h2 className={styles.sectionTitle}>
-              Just tell FlowTime what you need.
+              Xem xét từng đề xuất trước khi thay đổi lịch.
             </h2>
           </div>
 
           <div className={styles.dialogueCard}>
             <div className={styles.dialogueExchange}>
               <div className={styles.userBubble}>
-                “Move my English class to Friday.”
+                “Tôi đồng ý áp dụng các khung giờ này.”
               </div>
               <div className={styles.assistantBubble}>
                 <div className={styles.assistantText}>
-                  I checked Friday: 14:00–16:00 is completely open and matches your focus preferences.
+                  Bản nháp chỉ lưu đề xuất. Google Calendar chỉ được thay đổi sau khi bạn phê duyệt và áp dụng kế hoạch.
                 </div>
                 <div className={styles.confirmCard}>
-                  <span>Pending change: English Class → Friday 14:00–16:00</span>
+                  <span>Chờ xác nhận: tạo các sự kiện đã chọn</span>
                   <button type="button" onClick={openLogin} className={styles.confirmActionBtn}>
-                    Confirm change
+                    Bắt đầu với Google
                   </button>
                 </div>
               </div>
@@ -175,62 +175,62 @@ export const HomePage: React.FC = () => {
 
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionPre}>04 // INTEGRATION</span>
+            <span className={styles.sectionPre}>04 // DỮ LIỆU ĐẦU VÀO</span>
             <h2 className={styles.sectionTitle}>
-              Everything that shapes your time.
+              Mọi dữ kiện tạo nên kế hoạch của bạn.
             </h2>
           </div>
 
           <div className={styles.pillarsGrid}>
             <div className={styles.pillarCol}>
-              <span className={styles.pillarTag}>CALENDAR</span>
-              <h3 className={styles.pillarHeading}>What’s already happening.</h3>
+              <span className={styles.pillarTag}>LỊCH</span>
+              <h3 className={styles.pillarHeading}>Những việc đã diễn ra.</h3>
               <p className={styles.pillarDesc}>
-                Direct two-way Google Calendar synchronization. Free and busy blocks as your ground truth.
+                Đồng bộ các lịch Google vào dữ liệu cục bộ để xác định thời gian bận trước khi lập kế hoạch.
               </p>
             </div>
 
             <div className={styles.pillarCol}>
-              <span className={styles.pillarTag}>TASKS</span>
-              <h3 className={styles.pillarHeading}>What needs to happen.</h3>
+              <span className={styles.pillarTag}>NHIỆM VỤ</span>
+              <h3 className={styles.pillarHeading}>Những việc cần hoàn thành.</h3>
               <p className={styles.pillarDesc}>
-                Tasks with durations, priorities, deadlines, and split preferences waiting for the right slot.
+                Nhiệm vụ có thời lượng, ưu tiên, hạn chót và tùy chọn chia nhỏ để đưa vào các khung giờ phù hợp.
               </p>
             </div>
 
             <div className={styles.pillarCol}>
-              <span className={styles.pillarTag}>PREFERENCES</span>
-              <h3 className={styles.pillarHeading}>How you prefer to work.</h3>
+              <span className={styles.pillarTag}>SỞ THÍCH</span>
+              <h3 className={styles.pillarHeading}>Cách bạn muốn làm việc.</h3>
               <p className={styles.pillarDesc}>
-                Working hours, break buffers, no-weekend rules, and peak energy windows defined by you.
+                Giờ làm việc, thời gian nghỉ, ngày làm việc và giới hạn tập trung mỗi ngày do bạn thiết lập.
               </p>
             </div>
           </div>
         </section>
 
         <section className={styles.privacySection}>
-          <h2 className={styles.privacyTitle}>Your calendar stays yours.</h2>
+          <h2 className={styles.privacyTitle}>Lịch của bạn vẫn thuộc về bạn.</h2>
           <p className={styles.privacyText}>
-            FlowTime plans around your calendar. Changes to your schedule happen only when you explicitly confirm them.
+            FlowTime lập kế hoạch dựa trên lịch của bạn. Lịch chỉ thay đổi khi bạn chủ động phê duyệt và áp dụng kế hoạch.
           </p>
         </section>
 
         <section className={styles.finalCta}>
           <h2 className={styles.finalHeadline}>
-            Your time is already there.
+            Thời gian của bạn vẫn ở đó.
             <br />
-            FlowTime helps you find it.
+            FlowTime giúp bạn sắp xếp thời gian đó.
           </h2>
 
           <button type="button" onClick={openLogin} className={styles.primaryBtn}>
-            Continue with Google
+            Tiếp tục với Google
           </button>
         </section>
       </div>
 
       <footer className={styles.footer}>
-        <span className={styles.footerCode}>FLOWTIME // TIME, ORGANIZED.</span>
-        <span className={styles.footerCode}>PRECISION TIME ENGINE · SPRING AI · GOOGLE OAUTH</span>
+        <span className={styles.footerCode}>FLOWTIME // SẮP XẾP THỜI GIAN.</span>
+        <span className={styles.footerCode}>BỘ LẬP LỊCH · GOOGLE OAUTH</span>
       </footer>
     </div>
   );

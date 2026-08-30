@@ -51,13 +51,13 @@ public class SchedulingPreferenceService {
         try {
             ZoneId.of(request.timezone().trim());
         } catch (ZoneRulesException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "timezone must be a valid IANA timezone.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Múi giờ phải là một múi giờ IANA hợp lệ.");
         }
 
         if (!request.workdayStartTime().isBefore(request.workdayEndTime())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "workdayStartTime must be before workdayEndTime."
+                    "Giờ bắt đầu ngày làm việc phải trước giờ kết thúc."
             );
         }
     }

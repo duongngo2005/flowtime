@@ -88,11 +88,11 @@ public class PlanningApplyService {
             return calendarRepository.findByUserAndPrimaryTrue(user)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.CONFLICT,
-                            "A synced primary calendar is required before applying a plan."
+                            "Cần đồng bộ lịch chính trước khi áp dụng kế hoạch."
                     ));
         }
         return calendarRepository.findByUserAndGoogleCalendarId(user, calendarId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Target calendar is not available locally."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Lịch đích chưa có trong dữ liệu cục bộ."));
     }
 
     private List<PlannedSlot> recoverExistingEvents(
@@ -113,7 +113,7 @@ public class PlanningApplyService {
                     if ("cancelled".equalsIgnoreCase(existing.get().status())) {
                         throw new ResponseStatusException(
                                 HttpStatus.CONFLICT,
-                                "A previously created FlowTime event was cancelled in Google Calendar."
+                                "Một sự kiện FlowTime đã tạo trước đó đã bị hủy trong Google Calendar."
                         );
                     }
                     calendarEventUpsertService.upsert(user, targetCalendars.get(slot.getId()), existing.get());
@@ -146,15 +146,15 @@ public class PlanningApplyService {
 
         FreeBusyResponse response = googleCalendarApiClient.getFreeBusy(accessToken, calendarIds, from, to);
         if (response == null || response.calendars() == null) {
-            throw new IllegalStateException("Google FreeBusy returned no calendar availability data.");
+            throw new IllegalStateException("Google FreeBusy không trả về dữ liệu thời gian rảnh/bận của lịch.");
         }
         for (String calendarId : calendarIds) {
             FreeBusyResponse.CalendarBusy calendar = response.calendars().get(calendarId);
             if (calendar == null) {
-                throw new IllegalStateException("Google FreeBusy returned no availability for calendar " + calendarId + ".");
+                throw new IllegalStateException("Google FreeBusy không trả về dữ liệu rảnh/bận cho lịch " + calendarId + ".");
             }
             if (calendar.errors() != null && !calendar.errors().isEmpty()) {
-                throw new IllegalStateException("Google FreeBusy could not check calendar " + calendarId + ".");
+                throw new IllegalStateException("Google FreeBusy không thể kiểm tra lịch " + calendarId + ".");
             }
         }
 
@@ -163,7 +163,7 @@ public class PlanningApplyService {
             if (hasConflict(slot, response.calendars().get(targetCalendar.getGoogleCalendarId()))) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "A newly busy Google Calendar period conflicts with planned slot " + slot.getId() + "."
+                        "Một khoảng thời gian mới bận trên Google Calendar xung đột với khung giờ đã lên lịch."
                 );
             }
         }
@@ -180,7 +180,7 @@ public class PlanningApplyService {
             Instant busyEnd = Instant.parse(period.end());
             return busyStart.isBefore(slot.getEndAt()) && busyEnd.isAfter(slot.getStartAt());
         } catch (DateTimeParseException exception) {
-            throw new IllegalStateException("Google FreeBusy returned an invalid busy interval.", exception);
+            throw new IllegalStateException("Google FreeBusy trả về một khoảng thời gian bận không hợp lệ.", exception);
         }
     }
 
