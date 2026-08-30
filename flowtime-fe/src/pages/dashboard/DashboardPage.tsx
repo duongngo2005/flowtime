@@ -2,8 +2,10 @@ import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/api";
+import type { SchedulingPreferences } from "../../api/contracts";
 import { getErrorMessage } from "../../api/errors";
 import Dayline, { type DaylineEvent } from "../../components/dayline/Dayline";
+import { vietnamDayRange } from "../../lib/vietnamTime";
 import styles from "./DashboardPage.module.css";
 
 interface UserInfo {
@@ -25,19 +27,12 @@ interface CalendarSyncResponse {
   syncedTo: string;
 }
 
-const dayRange = () => {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { from: start.toISOString(), to: end.toISOString() };
-};
-
 export const DashboardPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<DaylineEvent[]>([]);
+  const [preferences, setPreferences] = useState<SchedulingPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,15 +40,17 @@ export const DashboardPage = () => {
 
   const loadDashboard = useCallback(async () => {
     try {
-      const range = dayRange();
-      const [userResponse, googleStatusResponse, eventsResponse] = await Promise.all([
+      const range = vietnamDayRange();
+      const [userResponse, googleStatusResponse, eventsResponse, preferencesResponse] = await Promise.all([
         api.get<UserInfo>("/api/auth/me"),
         api.get<GoogleConnectionStatus>("/api/v1/auth/google/status"),
         api.get<DaylineEvent[]>("/api/v1/calendar/events", { params: range }),
+        api.get<SchedulingPreferences>("/api/v1/scheduling-preferences"),
       ]);
       setUser(userResponse.data);
       setGoogleConnected(googleStatusResponse.data.connected);
       setCalendarEvents(eventsResponse.data);
+      setPreferences(preferencesResponse.data);
     } catch (requestError) {
       if (axios.isAxiosError(requestError) && requestError.response?.status === 401) {
         localStorage.removeItem("access_token");
@@ -126,7 +123,11 @@ export const DashboardPage = () => {
               {syncing ? "Đang đồng bộ…" : "Đồng bộ lịch"}
             </button>
           </div>
-          <Dayline events={calendarEvents} />
+          <Dayline
+            events={calendarEvents}
+            workdayEndTime={preferences?.workdayEndTime}
+            workdayStartTime={preferences?.workdayStartTime}
+          />
           <p className={styles.cardHint}></p>
         </article>
 

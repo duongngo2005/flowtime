@@ -2,20 +2,13 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import api from "../../api/api";
 import type { PlannedSlotApplyStatus, PlannedSlotStatus, PlanningSession, PlannedSlot, PlanningStatus } from "../../api/contracts";
 import { getErrorMessage } from "../../api/errors";
+import { addDaysToVietnamDate, formatVietnamDate, VIETNAM_TIMEZONE, vietnamDate } from "../../lib/vietnamTime";
 import styles from "../workspace/WorkspacePage.module.css";
 
 const activePlanStorageKey = "active_planning_id";
-const vietnamTimezone = "Asia/Ho_Chi_Minh";
-
-const localDate = (): string => {
-  const date = new Date();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-};
 
 const formatSlotTime = (value: string): string =>
-  new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short", timeZone: vietnamTimezone }).format(new Date(value));
+  new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short", timeZone: VIETNAM_TIMEZONE }).format(new Date(value));
 
 const unscheduledMessage = (reason: string): string => {
   const messages: Record<string, string> = {
@@ -52,7 +45,7 @@ const applyStatusLabel: Record<PlannedSlotApplyStatus, string> = {
 };
 
 const PlanningPage = () => {
-  const [startDate, setStartDate] = useState(localDate);
+  const [startDate, setStartDate] = useState(vietnamDate);
   const [days, setDays] = useState("7");
   const [plan, setPlan] = useState<PlanningSession | null>(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
@@ -229,7 +222,10 @@ const PlanningPage = () => {
           <>
             <div className={styles.detailGrid}>
               <div className={styles.detailItem}><span className={styles.detailLabel}>Tình trạng</span><span className={`${styles.statusPill} ${statusIsWarning(plan.status) ? styles.statusPillWarning : ""}`}>{planningStatusLabel[plan.status]}</span></div>
-              <div className={styles.detailItem}><span className={styles.detailLabel}>Cửa sổ</span><span className={styles.detailValue}>{plan.startDate} → {plan.endDate}</span></div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailLabel}>Cửa sổ</span>
+                <span className={styles.detailValue}>{formatVietnamDate(plan.startDate)} → {formatVietnamDate(addDaysToVietnamDate(plan.endDate, -1))}</span>
+              </div>
               <div className={styles.detailItem}><span className={styles.detailLabel}>Lần thử áp dụng</span><span className={styles.detailValue}>{plan.applyAttempts}</span></div>
             </div>
 
